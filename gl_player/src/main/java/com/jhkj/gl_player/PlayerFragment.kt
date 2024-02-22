@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -23,6 +24,9 @@ import androidx.fragment.app.FragmentManager
 import com.jhkj.gl_player.fragment.PlayerBaseFragment
 import com.jhkj.gl_player.util.DensityUtil
 import com.jhkj.gl_player.util.StatusBarTool
+import java.lang.ref.WeakReference
+import java.util.Timer
+import java.util.TimerTask
 import kotlin.math.abs
 
 
@@ -210,14 +214,15 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
 
         loadUrl("https://stream7.iqilu.com/10339/upload_transcode/202002/18/20200218114723HDu3hhxqIT.mp4")
         playBtn?.setOnClickListener {
-            if(isDoubleClick(it))return@setOnClickListener
+            lastShowControlPanelTime = SystemClock.elapsedRealtime()
             glPlayer?.switchPlayState()
         }
         muteBtn?.setOnClickListener {
-            if(isDoubleClick(it))return@setOnClickListener
+            lastShowControlPanelTime = SystemClock.elapsedRealtime()
             glPlayer?.switchVolume()
         }
         scaleBtn?.setOnClickListener {
+            lastShowControlPanelTime = SystemClock.elapsedRealtime()
             if(isDoubleClick(it))return@setOnClickListener
             if(isFullScreen){
                 isFullScreen = false
@@ -242,6 +247,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
 
                 StatusBarTool.exitFullScreen(requireActivity(),originStatusBarColor)
                 adjustToolbar()
+                toolbarBox?.visibility = View.GONE
             }
         }
     }
@@ -350,7 +356,6 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var lastMoveY = 0f //当前多边形整体移动的距离
     private var lastOriginX = -1
     private var lastOriginY = -1
-    private var lastTouchTime = -1L //最后一次触摸时间
     private val NONE = 0
     private val DRAG = 1
     private val ZOOM = 2
@@ -379,15 +384,6 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         if(event == null)return false
         when (event.action and MotionEvent.ACTION_MASK) {
             MotionEvent.ACTION_DOWN -> {
-                val elapseTime = SystemClock.elapsedRealtime()
-                if (lastTouchTime != -1L) {
-                    //如果触摸时间间隔小于200ms,直接返回
-                    if (elapseTime - lastTouchTime < 200) {
-                        //执行双击操作
-                        return true
-                    }
-                }
-                lastTouchTime = elapseTime
                 mode = DRAG
                 lastOriginX = -1
                 lastOriginY = -1
@@ -425,7 +421,8 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                 } else {
                     second = System.currentTimeMillis()
                 }
-
+                Log.i("CLICK","click first:$first, second:$second")
+                Log.i("CLICK","click interval:${first - second}")
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
                 mode = ZOOM
@@ -482,11 +479,12 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                 }
 
                 //mode == DRAG && isPolygonMoved &&
-                //如果两次点击事件差小于300ms,则为双击事件
+                //如果两次点击事件差小于100ms,则为双击事件
                 if ((second - first) in 1..300) {
                     //双击事件回调
                     first = 0
                     second = 0
+                    cancelTimeTask()
                     doubleClickHandle()
                 } else { //如果小于0则为单击事件
                     //三星手机太过灵敏，每次单击事件都会触发 Action_Move，
@@ -495,11 +493,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                     val endDownY = event.y
                     if (Math.abs(x_down - endDownX) < 5 &&
                         Math.abs(y_down - endDownY) < 5) {   //如果没有触发滑动事件，就是单击事件
-                        first = 0
-                        second = 0
-                        singleClickHandle()
-                    } else {
-
+                        startSingleTimeTask()
                     }
                 }
                 dismissAllControlWindow()
@@ -514,6 +508,26 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         return true
     }
 
+    private class SingleClickTask(private val o:WeakReference<PlayerFragment>):TimerTask(){
+        override fun run() {
+            o.get()?.singleClickHandle()
+        }
+    }
+    private var timer: Timer? = null
+    private var timerTask:SingleClickTask? = null
+    private fun startSingleTimeTask(){
+        cancelTimeTask()
+        timer = Timer()
+        timerTask = SingleClickTask(WeakReference(this))
+        timer?.schedule(timerTask,310)
+    }
+
+    private fun cancelTimeTask(){
+        timerTask?.cancel()
+        timerTask = null
+        timer?.cancel()
+        timer = null
+    }
 
     private fun handleTouchEvent(){
         when(actionMode){
@@ -606,10 +620,14 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
 
     //单击手势处理
     private fun singleClickHandle(){
-        if(!isControlPanelVisible){
-            visibleControlPanel()
-        }else{
-            dismissControlPanel()
+        first = 0
+        second = 0
+        activity?.runOnUiThread {
+            if(!isControlPanelVisible){
+                visibleControlPanel()
+            }else{
+                dismissControlPanel()
+            }
         }
     }
     //双击手势处理
