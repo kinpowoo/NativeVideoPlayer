@@ -1,5 +1,6 @@
 package com.jhkj.gl_player.util;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
@@ -81,6 +82,7 @@ public final class DensityUtil {
     //获得状态栏高度
     public static int getStatusBarHeight(Activity mActivity) {
         Resources resources = mActivity.getResources();
+        @SuppressLint("DiscouragedApi")
         int resourceId = resources.getIdentifier("status_bar_height", "dimen","android");
         return resources.getDimensionPixelSize(resourceId);
     }

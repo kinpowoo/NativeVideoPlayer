@@ -78,7 +78,6 @@ object StatusBarTool {
                    keepActionBar:Boolean,isStatusTranslucent:Boolean){
         //允许设置status bar background 的颜色
         activity.window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-
         val statusBarTextFlags = View.SYSTEM_UI_FLAG_VISIBLE //恢复状态栏白色字体
 
         //注释掉的是将底部虚拟键盘隐藏的代码，如果要在有

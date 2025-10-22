@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="SplashTheme" parent="ThemeSplashScreen">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:navigationBarColor">@color/white</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <!--启动画面背景颜色-->
+        <item name="windowSplashScreenBackground">@color/primary_light_bg</item>
+        <!-- 图标背景的应用图标尺寸应为 288×288 dp（同时位于直径 192 dp 的圆圈内）-->
+        <!-- 带有图标背景的应用图标尺寸应为 240×240 dp（同时位于直径 160 dp 的圆圈内）-->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_intro</item>
+        <item name="android:fitsSystemWindows">true</item>
+        <item name="android:windowBackground">@color/primary_light_bg</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+        <!-- 品牌图片尺寸应为 200×80 dp-->
+        <item name="android:windowSplashScreenBrandingImage">@drawable/app_name_intro</item>
+        <!-- Splash退出后的主题-->
+        <!--        <item name="postSplashScreenTheme">@style/AppTheme</item>-->
+    </style>
+
+</resources>

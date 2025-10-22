@@ -23,8 +23,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.jhkj.gl_player.fragment.PlayerBaseFragment
 import com.jhkj.gl_player.util.DensityUtil
+import com.jhkj.gl_player.util.ImmersiveStatusBarUtils
 import com.jhkj.gl_player.util.StatusBarTool
 import java.lang.ref.WeakReference
+import java.util.Locale
 import java.util.Timer
 import java.util.TimerTask
 import kotlin.math.abs
@@ -80,10 +82,19 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val dp240 = DensityUtil.dip2px(requireContext(), 240f).toInt()
-        setVideoViewScale(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            dp240
-        )
+        setVideoViewScale(ViewGroup.LayoutParams.MATCH_PARENT, dp240)
+
+        activity?.let {
+            // 1. 设置沉浸式状态栏
+//            ImmersiveStatusBarUtils.setImmersiveStatusBar(it)
+//            // 2. 设置状态栏文字颜色为深色（适合浅色背景）
+//            ImmersiveStatusBarUtils.setStatusBarTextColor(it, false)
+//            // 3. 设置状态栏背景颜色
+//            ImmersiveStatusBarUtils.setStatusBarColor(it, Color.RED)
+//            // 4. 隐藏状态栏
+//            ImmersiveStatusBarUtils.showOrHideStatusBar(it, false)
+        }
+
         originStatusBarColor = requireActivity().window.statusBarColor
         statusBarHeight = StatusBarTool.getStatusBarHeight(requireActivity())
         sw = DensityUtil.getScreenWidth(requireContext())
@@ -305,9 +316,9 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         val m = s/60
         val sec = s % 60
         if( m > 99*60){
-            return String.format("%03d:%02d",m,sec)
+            return String.format(Locale.US,"%03d:%02d",m,sec)
         }else{
-            return String.format("%02d:%02d",m,sec)
+            return String.format(Locale.US,"%02d:%02d",m,sec)
         }
     }
     private fun genProgressText(p:Int,d:Int):String{
@@ -340,13 +351,20 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     }
 
     private fun adjustToolbar(){
-        val layoutParams: ConstraintLayout.LayoutParams? = toolbarBox?.layoutParams as? ConstraintLayout.LayoutParams
-        if(isFullScreen){
-            layoutParams?.topMargin = statusBarHeight
-        }else{
-            layoutParams?.topMargin = 0
+//        val layoutParams: ConstraintLayout.LayoutParams? = toolbarBox?.layoutParams as? ConstraintLayout.LayoutParams
+//        if(isFullScreen){
+//            layoutParams?.topMargin = statusBarHeight
+//        }else{
+//            layoutParams?.topMargin = 0
+//        }
+//        toolbarBox?.layoutParams = layoutParams
+
+
+        // 5. 设置全屏模式
+        activity?.let {
+//            ImmersiveStatusBarUtils.setFullScreen(it, isFullScreen)
         }
-        toolbarBox?.layoutParams = layoutParams
+
     }
 
 
@@ -439,7 +457,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                     lastMoveY = event.y
                     dx = lastMoveX - x_down
                     dy = lastMoveY - y_down
-                    if(abs(dx) > abs(dy)) {  // x 轴称动距离超过10，响应它
+                    if(abs(dx) > abs(dy) && abs(dx) > 5) {  // x 轴称动距离超过10，响应它
                         if(actionMode == ActionMode.NONE) {
                             if (dx > 3) {
                                 actionMode = ActionMode.FastForward
@@ -451,7 +469,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                             }
                         }
                         handleTouchEvent()
-                    }else if(abs(dy) > abs(dx)){ // y 轴称动距离超过10，响应它
+                    }else if(abs(dy) > abs(dx) && abs(dy) > 5){ // y 轴称动距离超过10，响应它
                         if(actionMode == ActionMode.NONE) {
                             if (isLeftSide) {
                                 actionMode = ActionMode.AdjustBrightness
@@ -610,7 +628,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                 brightnessIcon?.setImageResource(R.drawable.baseline_volume_off_24)
             }
         }
-        brightnessText?.text = String.format("%d%%",percentInt)
+        brightnessText?.text = String.format(Locale.US,"%d%%",percentInt)
         brightnessSlider?.progress = percentInt
     }
     private fun dismissAllControlWindow(){

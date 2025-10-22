@@ -9,14 +9,14 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import com.jhkj.gl_player.PlayerFragment
+import com.jhkj.gl_player.util.ImmersiveStatusBarUtils
 
 class MainActivity : AppCompatActivity(){
     private var playerFragment: PlayerFragment? = null
@@ -25,6 +25,11 @@ class MainActivity : AppCompatActivity(){
         super.onCreate(savedInstanceState)
         setContentView(R.layout.main_layout)
 
+        // 启用 Edge-to-Edge
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        supportActionBar?.hide()
+//        actionBar?.hide()
+//        supportActionBar?.hide()
 
         findViewById<Button>(R.id.pick_video).setOnClickListener{
             if(!hasPermissions(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)){
@@ -51,7 +56,6 @@ class MainActivity : AppCompatActivity(){
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
             if (it) { //如果通过了权限，打开相册
                 openAlbum()
-            } else {
             }
         }
     //分别进入视频选择和图片选择页面
@@ -112,4 +116,11 @@ class MainActivity : AppCompatActivity(){
             }
         }
 
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if(hasFocus){
+            ImmersiveStatusBarUtils.setFullScreen(this,true)
+        }
+    }
 }

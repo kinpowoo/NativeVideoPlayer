@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="ThemeSplashScreen" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:opacity">opaque</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:fitsSystemWindows">false</item>
+        <item name="windowSplashScreenAnimationDuration">10000</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="splashScreenIconSize">@dimen/splashscreen_icon_size_no_background</item>
+        <item name="windowSplashScreenBackground">?android:colorBackground</item>
+        <item name="windowSplashScreenAnimatedIcon">@android:drawable/sym_def_app_icon</item>
+    </style>
+
+    <style name="SplashTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowBackground">@drawable/splash_bg</item>
+    </style>
+
+    <style name="AppTheme" parent="SplashTheme">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:animationDuration">0</item>
+        <!-- windowIsFloating 为 true 会导致底部导航栏无法隐藏  -->
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:actionBarItemBackground">@null</item>
+        <item name="android:stateListAnimator">@null</item>
+        <!--  windowIsTranslucent会导致app进入首页时间停顿几秒，但是它会解决白屏黑屏的问题     -->
+        <!--        <item name="android:windowIsTranslucent">false</item>-->
+
+        <!--一行代码解决NavigationView的item的高度问题-->
+        <item name="android:listPreferredItemHeightSmall">56dp</item>
+    </style>
+
+
+</resources>
