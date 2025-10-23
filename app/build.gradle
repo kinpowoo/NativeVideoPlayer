@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
@@ -31,18 +32,49 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_21
     }
+
+    buildFeatures {
+        viewBinding true
+        compose true
+    }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+
+    // 核心 Compose 依赖
+    implementation 'androidx.activity:activity-compose:1.8.0' // 用于 Compose 与 Activity 集成
+    implementation 'androidx.compose.ui:ui:1.5.4' // 基础 UI 工具包
+    implementation 'androidx.compose.material3:material3:1.4.0' // Material Design 3 组件
+    implementation 'androidx.compose.ui:ui-tooling-preview:1.5.4' // 预览支持
+    debugImplementation 'androidx.compose.ui:ui-tooling:1.5.4' // 调试工具
+    implementation("androidx.navigation:navigation-compose:2.7.5") //compose 路由导航
+
+    // 可选：其他常用扩展库
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2' // ViewModel 支持
+    implementation 'androidx.navigation:navigation-compose:2.7.4' // 导航库
+    implementation 'androidx.compose.material:material-icons-extended:1.5.4' // 图标扩展
+
     def coreVer = "1.13.0"
     implementation "androidx.core:core:$coreVer"
     implementation "androidx.core:core-ktx:$coreVer"
     implementation "androidx.activity:activity-ktx:1.7.0"  // 用于 Activity
     implementation "androidx.fragment:fragment-ktx:1.6.0"  // 用于 Fragment
 
+
+    def lifecycleVer = "2.6.2"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVer"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVer"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVer"
+
+    def coroutineVer = "1.6.4"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutineVer"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutineVer"
+
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation "com.google.android.material:material:1.13.0"
     implementation 'androidx.core:core-splashscreen:1.0.1'
+
     implementation project(path: ':gl_player')
+    implementation project(path: ':webdav')
 }

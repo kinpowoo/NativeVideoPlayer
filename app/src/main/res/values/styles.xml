@@ -22,13 +22,19 @@
     </style>
 
     <style name="AppTheme" parent="SplashTheme">
+<!--        <item name="android:fontFamily">@font/yesteryear_regular</item>-->
+<!--        <item name="fontFamily">@font/yesteryear_regular</item>-->
+
+        <item name="android:fontFamily">@font/marckscript_regular</item>
+        <item name="fontFamily">@font/marckscript_regular</item>
+
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowDisablePreview">true</item>
         <item name="android:animationDuration">0</item>
         <!-- windowIsFloating 为 true 会导致底部导航栏无法隐藏  -->
         <item name="android:windowIsFloating">false</item>
-        <item name="android:windowFullscreen">true</item>
+<!--        <item name="android:windowFullscreen">true</item>-->
         <item name="android:actionBarItemBackground">@null</item>
         <item name="android:stateListAnimator">@null</item>
         <!--  windowIsTranslucent会导致app进入首页时间停顿几秒，但是它会解决白屏黑屏的问题     -->

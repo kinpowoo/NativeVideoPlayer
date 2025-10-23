@@ -1,5 +1,6 @@
 package com.jhkj.gl_player
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
@@ -23,7 +24,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.jhkj.gl_player.fragment.PlayerBaseFragment
 import com.jhkj.gl_player.util.DensityUtil
-import com.jhkj.gl_player.util.ImmersiveStatusBarUtils
 import com.jhkj.gl_player.util.StatusBarTool
 import java.lang.ref.WeakReference
 import java.util.Locale
@@ -68,6 +68,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var sw:Int = 0
     private var sh:Int = 0
     private var audioManager:AudioManager? = null
+    public var initListener:WeakReference<Runnable>? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -134,6 +135,8 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         progressBar = view.findViewById(R.id.progress_bar)
         oldW = view.layoutParams.width
         oldH = view.layoutParams.height
+
+        initListener?.get()?.run()
     }
 
     private fun setListener(view:View){
@@ -223,7 +226,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
             }
         })
 
-        loadUrl("https://stream7.iqilu.com/10339/upload_transcode/202002/18/20200218114723HDu3hhxqIT.mp4")
+//        loadUrl("https://stream7.iqilu.com/10339/upload_transcode/202002/18/20200218114723HDu3hhxqIT.mp4")
         playBtn?.setOnClickListener {
             lastShowControlPanelTime = SystemClock.elapsedRealtime()
             glPlayer?.switchPlayState()
@@ -238,15 +241,11 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
             if(isFullScreen){
                 isFullScreen = false
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED  //切换竖屏
-                StatusBarTool.exitFullScreen(requireActivity(),originStatusBarColor)
-                adjustToolbar()
                 toolbarBox?.visibility = View.GONE
             }
             else{
                 isFullScreen = true
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE  //切换横屏
-                StatusBarTool.fullScreen(requireActivity(),false,true)
-                adjustToolbar()
                 toolbarBox?.visibility = View.VISIBLE
             }
         }
@@ -256,8 +255,8 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                 isFullScreen = false
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED  //切换竖屏
 
-                StatusBarTool.exitFullScreen(requireActivity(),originStatusBarColor)
-                adjustToolbar()
+//                StatusBarTool.exitFullScreen(requireActivity(),originStatusBarColor)
+//                adjustToolbar()
                 toolbarBox?.visibility = View.GONE
             }
         }
@@ -269,6 +268,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     fun loadUri(uri: Uri){
         glPlayer?.loadUri(uri)
     }
+
 
     private fun visibleControlPanel(){
         isControlPanelVisible = true
@@ -350,24 +350,6 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         view?.layoutParams = layoutParams
     }
 
-    private fun adjustToolbar(){
-//        val layoutParams: ConstraintLayout.LayoutParams? = toolbarBox?.layoutParams as? ConstraintLayout.LayoutParams
-//        if(isFullScreen){
-//            layoutParams?.topMargin = statusBarHeight
-//        }else{
-//            layoutParams?.topMargin = 0
-//        }
-//        toolbarBox?.layoutParams = layoutParams
-
-
-        // 5. 设置全屏模式
-        activity?.let {
-//            ImmersiveStatusBarUtils.setFullScreen(it, isFullScreen)
-        }
-
-    }
-
-
     private var first: Long = 0 //第一次点击的时间
     private var second: Long = 0 //第二次点击的时间
     private var lastMoveX = 0f
@@ -398,6 +380,8 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         FastForward(2),
         FastBackward(3)
     }
+
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         if(event == null)return false
         when (event.action and MotionEvent.ACTION_MASK) {
