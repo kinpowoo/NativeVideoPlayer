@@ -1,4 +1,4 @@
-package com.jhkj.videoplayer.compose_pages.main
+package com.jhkj.videoplayer.compose_pages.pages
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable

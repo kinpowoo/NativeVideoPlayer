@@ -1,6 +1,5 @@
 package com.jhkj.videoplayer.app
 
-import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -24,9 +23,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -34,7 +30,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
-import com.jhkj.videoplayer.compose_pages.main.MainPage
+import com.jhkj.videoplayer.compose_pages.pages.MainPage
 import com.jhkj.videoplayer.compose_pages.router.ParamsConfig
 import com.jhkj.videoplayer.compose_pages.router.RouteConfig
 import com.jhkj.videoplayer.compose_pages.widgets.NavBottomBar

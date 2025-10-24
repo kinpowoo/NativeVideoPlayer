@@ -111,12 +111,14 @@ public object ImmersiveStatusBarUtils {
             val controller = decorView.windowInsetsController
             if (fullScreen) {
 //                controller?.hide(WindowInsetsCompat.Type.systemBars())
+                controller?.show(WindowInsetsCompat.Type.systemBars())
                 if(isDarkMode){
                     // 设置状态栏文字为浅色（白色）
                     controller?.setSystemBarsAppearance(
                         0, // 清除标志
                         WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
                     )
+
                 }else{
                     // 设置状态栏文字为深色（黑色）
                     controller?.setSystemBarsAppearance(
@@ -124,7 +126,6 @@ public object ImmersiveStatusBarUtils {
                         WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
                     )
                 }
-//                controller?.hide(WindowInsetsCompat.Type.systemBars())
 //                controller?.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             } else {
                 controller?.show(WindowInsetsCompat.Type.systemBars())
@@ -161,6 +162,10 @@ public object ImmersiveStatusBarUtils {
                    ).inv()
             }
             decorView.systemUiVisibility = systemUiVisibility
+
+            window.navigationBarColor = if(isDarkMode) Color.BLACK else Color.WHITE
         }
+//        val pixelColor = PixelExtractor.get().getPixelColor(window, activity)
+
     }
 }

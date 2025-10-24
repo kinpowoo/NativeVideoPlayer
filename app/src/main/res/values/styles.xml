@@ -4,7 +4,6 @@
     <style name="ThemeSplashScreen" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:opacity">opaque</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:fitsSystemWindows">false</item>
         <item name="windowSplashScreenAnimationDuration">10000</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
@@ -38,7 +37,8 @@
         <item name="android:actionBarItemBackground">@null</item>
         <item name="android:stateListAnimator">@null</item>
         <!--  windowIsTranslucent会导致app进入首页时间停顿几秒，但是它会解决白屏黑屏的问题     -->
-        <!--        <item name="android:windowIsTranslucent">false</item>-->
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
 
         <!--一行代码解决NavigationView的item的高度问题-->
         <item name="android:listPreferredItemHeightSmall">56dp</item>

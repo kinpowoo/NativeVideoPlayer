@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
+    id 'kotlin-parcelize' // 添加这行
 }
 
 android {
@@ -71,9 +72,16 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutineVer"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutineVer"
 
+    // ktor 网络请求库
+    implementation "io.ktor:ktor-client-core:2.3.3"
+    implementation "io.ktor:ktor-client-android:2.3.3"
+    implementation "io.ktor:ktor-client-content-negotiation:2.3.3"
+    implementation "io.ktor:ktor-serialization-gson:2.3.3"
+
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation "com.google.android.material:material:1.13.0"
     implementation 'androidx.core:core-splashscreen:1.0.1'
+    implementation 'com.google.code.gson:gson:2.11.0'
 
     implementation project(path: ':gl_player')
     implementation project(path: ':webdav')
