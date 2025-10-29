@@ -1,5 +1,15 @@
 package com.jhkj.videoplayer.compose_pages.pages
 
+import android.view.View
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOut
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +25,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,6 +34,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,6 +45,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -44,9 +60,12 @@ import com.jhkj.videoplayer.theme.textThird
 @Composable
 fun ConnectionsScreen(navController: NavController, viewModel: ConnInfoVm = viewModel()) {
     val connInfos by viewModel.allConn.collectAsState(initial = emptyList())
+    var fold by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(10.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().height(54.dp)
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp)
             .statusBarsPadding(),
             verticalAlignment = Alignment.CenterVertically) {
             CustomIcon(
@@ -62,7 +81,9 @@ fun ConnectionsScreen(navController: NavController, viewModel: ConnInfoVm = view
                 fontSize = 18.sp,
                 fontWeight = FontWeight.W600,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f).fillMaxHeight()
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
             CustomIcon(
                 modifier = Modifier.size(44.dp),
@@ -74,7 +95,8 @@ fun ConnectionsScreen(navController: NavController, viewModel: ConnInfoVm = view
             }
         }
 
-        Row(modifier = Modifier.fillMaxWidth()
+        Row(modifier = Modifier
+            .fillMaxWidth()
             .statusBarsPadding()
             .padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -85,13 +107,26 @@ fun ConnectionsScreen(navController: NavController, viewModel: ConnInfoVm = view
                 fontWeight = FontWeight.Normal,
                 modifier = Modifier.weight(1f)
             )
+            Spacer(modifier = Modifier.weight(1f))
+            IconButton(onClick = {
+                fold = !fold
+            }) {
+                Icon(if(fold) Icons.Default.ExpandLess else
+                    Icons.Default.ExpandMore, contentDescription = "Fold")
+            }
         }
 
-        LazyColumn (modifier = Modifier.padding(horizontal = 6.dp)){
-            items(connInfos) { conn ->
-                ConnItem(conn = conn, onDelete = {
-                    viewModel.deleteConn(conn) }
-                )
+        if(!fold) {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(horizontal = 6.dp)
+            ) {
+                items(connInfos) { conn ->
+                    ConnItem(conn = conn, onDelete = {
+                        viewModel.deleteConn(conn)
+                    }
+                    )
+                }
             }
         }
     }
