@@ -35,7 +35,7 @@ fun HomeScreen(navController: NavController) {
                 Color.Gray,
                 Color.Blue,
             ){
-                navController.navigate("${RouterName.AddConnection.name}")
+                navController.navigate(RouterName.AddConnection.name)
             }
             Spacer(modifier = Modifier.width(12.dp))
         }

@@ -3,6 +3,8 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
     id 'kotlin-parcelize' // 添加这行
+//    id "kotlin-kapt"  // 如果使用 Kotlin 注解处理
+    id "com.google.devtools.ksp"
 }
 
 android {
@@ -26,12 +28,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_21
-        targetCompatibility JavaVersion.VERSION_21
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_21
+        jvmTarget = JavaVersion.VERSION_17
     }
 
     buildFeatures {
@@ -68,15 +70,25 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVer"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVer"
 
-    def coroutineVer = "1.6.4"
+    def coroutineVer = "1.8.0"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutineVer"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutineVer"
 
     // ktor 网络请求库
-    implementation "io.ktor:ktor-client-core:2.3.3"
-    implementation "io.ktor:ktor-client-android:2.3.3"
-    implementation "io.ktor:ktor-client-content-negotiation:2.3.3"
-    implementation "io.ktor:ktor-serialization-gson:2.3.3"
+    def ktorVer = "2.3.3"
+    implementation "io.ktor:ktor-client-core:$ktorVer"
+    implementation "io.ktor:ktor-client-android:$ktorVer"
+    implementation "io.ktor:ktor-client-content-negotiation:$ktorVer"
+    implementation "io.ktor:ktor-serialization-gson:$ktorVer"
+
+
+    // Room 核心库
+    def roomVer = "2.8.3"
+    implementation("androidx.room:room-runtime:$roomVer")
+    ksp("androidx.room:room-compiler:$roomVer")  // Kotlin 使用 kapt
+    // 可选：Room 对 Kotlin 协程的支持
+    implementation("androidx.room:room-ktx:$roomVer")
+
 
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation "com.google.android.material:material:1.13.0"

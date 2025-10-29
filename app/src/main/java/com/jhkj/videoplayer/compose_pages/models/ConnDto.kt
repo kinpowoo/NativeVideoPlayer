@@ -1,6 +1,9 @@
 package com.jhkj.videoplayer.compose_pages.models
 
 import android.os.Parcelable
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import kotlinx.parcelize.Parcelize
 
 object ConnConfig {
@@ -17,14 +20,16 @@ object ConnConfig {
 }
 
 
+@Entity(tableName = "ConnInfo")
 @Parcelize
 data class ConnInfo(
-    val displayName:String,
-    val domain:String,
-    val path:String?,
-    val protocol:String,
-    val port:Int,
-    val username:String,
-    val pass:String,
-    val connType:Int
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @ColumnInfo(name = "display_name") val displayName:String,
+    @ColumnInfo(name = "domain") val domain:String,
+    @ColumnInfo(name = "path") val path:String?,
+    @ColumnInfo(name = "protocol") val protocol:String,
+    @ColumnInfo(name = "port") val port:Int,
+    @ColumnInfo(name = "username") val username:String,
+    @ColumnInfo(name = "pass") val pass:String,
+    @ColumnInfo(name = "conn_type") val connType:Int
 ):Parcelable

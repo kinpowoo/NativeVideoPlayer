@@ -6,26 +6,24 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,35 +34,86 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.jhkj.videoplayer.compose_pages.models.ConnInfo
-import com.jhkj.videoplayer.compose_pages.viewmodel.WebdavViewModel
+import com.jhkj.videoplayer.compose_pages.viewmodel.ConnInfoVm
 import com.jhkj.videoplayer.compose_pages.widgets.CustomIcon
 import com.jhkj.videoplayer.compose_pages.widgets.CustomTextField
 import com.jhkj.videoplayer.theme.textPrimary
 import com.jhkj.videoplayer.theme.transBg
 
 class SaveState {
-    private val _dataEdit = mutableStateOf(false)
+    val _dataEdit = mutableStateOf(false)
     val isDataEdit: State<Boolean> = _dataEdit
 }
 @Composable
 fun rememberSaveState() = remember { SaveState() }
 
+
+
 @Composable
-fun ConnectionEditScreen(connDto:ConnInfo?, isEdit:Boolean, navController: NavController,viewModel:WebdavViewModel = viewModel()) {
+fun ConnectionEditScreen(connDto:ConnInfo?, isEdit:Boolean, navController: NavController,
+                         connVm:ConnInfoVm = viewModel()) {
     val saveState = rememberSaveState()
     var protocolIndex by remember { mutableStateOf(0) }
+    var showDialog by remember { mutableStateOf(false) }
+    var saveResult by remember { mutableStateOf(false) }
+    var resultMessage by remember { mutableStateOf<String?>(null) }
 
     var displayName by remember { mutableStateOf("") }
     var fullURL by remember { mutableStateOf("") }
     var host by remember { mutableStateOf("") }
-    var protocol by remember { mutableStateOf("") }
+    var path by remember { mutableStateOf("") }
+    var port by remember { mutableStateOf("80") }
+    var protocol by remember { mutableStateOf("HTTP") }
+    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    if(connDto != null){
+        displayName = connDto.displayName
+        host = connDto.domain
+        path = connDto.path ?: ""
+        port = connDto.port.toString()
+        protocol = connDto.protocol
+        username = connDto.username
+        password = connDto.pass
+    }
+
+    fun connInfoInputChange(){
+        val a1 = displayName.isEmpty()
+        val a2 = host.isEmpty()
+        val a3 = path.isEmpty()
+        val a4 = port.isEmpty()
+        saveState._dataEdit.value = (!a1 || !a2 || !a3 || !a4)
+        if(!a2){
+            val lowercaseProtocol = protocol.lowercase()
+            if(!a3) {
+                val pathWithoutPrefix = path.removePrefix("/")
+                fullURL = "$lowercaseProtocol://$host:$port/$pathWithoutPrefix"
+            }else{
+                fullURL = "$lowercaseProtocol://$host:$port"
+            }
+        }
+    }
+
+    fun saveBtnClick(onResult: (Boolean) -> Unit){
+        val dto = ConnInfo(connDto?.id ?: 0,
+            displayName,
+            host,
+            path,
+            protocol,
+            port.toInt(),
+            username,
+            password,
+            ConnType.WEBDAV.ordinal)
+        connVm.insertOrUpdateConn(dto,onResult)
+    }
+
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxWidth().height(56.dp)
@@ -90,7 +139,13 @@ fun ConnectionEditScreen(connDto:ConnInfo?, isEdit:Boolean, navController: NavCo
                 if(saveState.isDataEdit.value) Color.Blue else Color.Gray,
                 Color.Gray,
                 onClick = {
-                    navController.popBackStack()
+                    if(saveState.isDataEdit.value) {
+                        saveBtnClick{ res ->
+                            saveResult = res
+                            showDialog = true
+                            resultMessage = if(res) "保存成功" else "保存失败"
+                        }
+                    }
                 }
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -110,7 +165,6 @@ fun ConnectionEditScreen(connDto:ConnInfo?, isEdit:Boolean, navController: NavCo
                     placeholder = "可选",
                     modifier = Modifier.padding(start = 5.dp)
                         .background(color = transBg)
-
                 )
             }
 
@@ -170,15 +224,105 @@ fun ConnectionEditScreen(connDto:ConnInfo?, isEdit:Boolean, navController: NavCo
                     text = host,
                     onValueChange = {
                         host = it
+                        connInfoInputChange()
                     },
                     placeholder = "",
                     modifier = Modifier.padding(start = 5.dp)
+                        .background(color = transBg)
+                )
+            }
+
+            //第五行
+            Spacer(modifier = Modifier.height(15.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Box(modifier = Modifier.width(100.dp)) {
+                    Text("路径", fontSize = 16.sp, color = textPrimary)
+                }
+                CustomTextField(
+                    text = path,
+                    onValueChange = {
+                        path = it
+                        connInfoInputChange()
+                    },
+                    placeholder = "可选",
+                    modifier = Modifier.padding(start = 5.dp)
                         .background(color = transBg),
-                    isEditable = false,
+                )
+            }
+
+            //第六行
+            Spacer(modifier = Modifier.height(15.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Box(modifier = Modifier.width(100.dp)) {
+                    Text("端口", fontSize = 16.sp, color = textPrimary)
+                }
+                CustomTextField(
+                    text = port,
+                    onValueChange = {
+                        port = it
+                        connInfoInputChange()
+                    },
+                    placeholder = "可选",
+                    maxLength = 5,
+                    modifier = Modifier.padding(start = 5.dp)
+                        .background(color = transBg),
+                    keyboardType = KeyboardType.Number
+                )
+            }
+
+            // ==================================================
+            Spacer(modifier = Modifier.height(30.dp))
+            Text("认证", fontSize = 14.sp, color = textPrimary)
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Box(modifier = Modifier.width(100.dp)) {
+                    Text("用户名", fontSize = 16.sp, color = textPrimary)
+                }
+                CustomTextField(
+                    text = username,
+                    onValueChange = {
+                        username = it
+                    },
+                    placeholder = "可选",
+                    modifier = Modifier.padding(start = 5.dp)
+                        .background(color = transBg),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(15.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Box(modifier = Modifier.width(100.dp)) {
+                    Text("密码", fontSize = 16.sp, color = textPrimary)
+                }
+                CustomTextField(
+                    text = password,
+                    onValueChange = {
+                        password = it
+                    },
+                    placeholder = "可选",
+                    modifier = Modifier.padding(start = 5.dp)
+                        .background(color = transBg),
+                    keyboardType = KeyboardType.Password
                 )
             }
         }
 
+
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                title = { Text("操作结果") },
+                text = { Text(resultMessage ?: "") },
+                confirmButton = { Button(onClick = {
+                    showDialog = false
+                    if(saveResult) {
+                        navController.popBackStack()
+                    }
+                    saveResult = false
+                }
+                ) { Text("确定") } }
+            )
+        }
     }
 }
 

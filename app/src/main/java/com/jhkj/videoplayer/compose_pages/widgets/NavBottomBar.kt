@@ -34,7 +34,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -50,9 +49,9 @@ import com.jhkj.videoplayer.compose_pages.models.ConnInfo
 import com.jhkj.videoplayer.compose_pages.pages.AddConnectionScreen
 import com.jhkj.videoplayer.compose_pages.pages.ConnType
 import com.jhkj.videoplayer.compose_pages.pages.ConnectionEditScreen
+import com.jhkj.videoplayer.compose_pages.pages.ConnectionsScreen
 import com.jhkj.videoplayer.compose_pages.pages.HomeScreen
 import com.jhkj.videoplayer.compose_pages.router.ParamsConfig
-import com.jhkj.videoplayer.compose_pages.router.RouteConfig
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     data object Home : Screen(RouterName.Home.name, "Home", Icons.Outlined.Home)
@@ -107,7 +106,7 @@ fun NavBottomBar() {
                 .weight(1f)
         ) {
             composable(Screen.Home.route) { HomeScreen(navController) }
-            composable(Screen.Connection.route) { FavoriteScreen(navController) }
+            composable(Screen.Connection.route) { ConnectionsScreen(navController) }
             composable(Screen.Profile.route) { ProfileScreen(navController) }
             composable(RouterName.AddConnection.name){ AddConnectionScreen(navController) }
             //必传参数，使用"/"拼写在路由地址后面添加占位符
@@ -220,14 +219,7 @@ private fun BottomBarItem(
 }
 
 
-@Composable
-fun FavoriteScreen(navController: NavController) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text = "FavoriteScreen"
-        )
-    }
-}
+
 
 @Composable
 fun ProfileScreen(navController: NavController) {

@@ -44,30 +44,30 @@ enum class ConnType{
 }
 data class Item(val icon: Int, val title:String,val identity:ConnType)
 
+val connTypeList = listOf(
+    Item(R.drawable.windows,"Windows",ConnType.WINDOWS),
+    Item(R.drawable.macos,"macOS",ConnType.MACOS),
+    Item(R.drawable.linux,"Linux",ConnType.LINUX),
+    Item(R.drawable.nas,"NAS",ConnType.NAS),
+    Item(R.drawable.ftp,"FTP",ConnType.FTP),
+    Item(R.drawable.sftp,"SFTP",ConnType.SFTP),
+    Item(R.drawable.webdav,"WebDAV",ConnType.WEBDAV),
+    Item(R.drawable.owncloud,"ownCloud",ConnType.OWNCLOUD),
+    Item(R.drawable.nfs2,"NFS",ConnType.NFS),
+    Item(R.drawable.google_drive,"Drive",ConnType.GOOGLE_DRIVE),
+    Item(R.drawable.dropbox,"Dropbox",ConnType.DROPBOX),
+    Item(R.drawable.onedrive,"OneDrive",ConnType.ONEDRIVE),
+    Item(R.drawable.box,"Box",ConnType.BOX),
+    Item(R.drawable.baidu_netdisk,"百度网盘",ConnType.BAIDU_NETDISK),
+    Item(R.drawable.aws,"S3",ConnType.AWS),
+    Item(R.drawable.ali_cloud,"阿里云盘",ConnType.ALI_CLOUD),
+    Item(R.drawable.mega,"Mega",ConnType.MEGA),
+    Item(R.drawable.jellyfin,"Jellyfin",ConnType.JELLYFIN),
+    Item(R.drawable.emby,"Emby",ConnType.EMBY),
+)
+
 @Composable
 fun AddConnectionScreen(navController: NavController) {
-    val list = listOf(
-        Item(R.drawable.windows,"Windows",ConnType.WINDOWS),
-        Item(R.drawable.macos,"macOS",ConnType.MACOS),
-        Item(R.drawable.linux,"Linux",ConnType.LINUX),
-        Item(R.drawable.nas,"NAS",ConnType.NAS),
-        Item(R.drawable.ftp,"FTP",ConnType.FTP),
-        Item(R.drawable.sftp,"SFTP",ConnType.SFTP),
-        Item(R.drawable.webdav,"WebDAV",ConnType.WEBDAV),
-        Item(R.drawable.owncloud,"ownCloud",ConnType.OWNCLOUD),
-        Item(R.drawable.nfs2,"NFS",ConnType.NFS),
-        Item(R.drawable.google_drive,"Drive",ConnType.GOOGLE_DRIVE),
-        Item(R.drawable.dropbox,"Dropbox",ConnType.DROPBOX),
-        Item(R.drawable.onedrive,"OneDrive",ConnType.ONEDRIVE),
-        Item(R.drawable.box,"Box",ConnType.BOX),
-        Item(R.drawable.baidu_netdisk,"百度网盘",ConnType.BAIDU_NETDISK),
-        Item(R.drawable.aws,"S3",ConnType.AWS),
-        Item(R.drawable.ali_cloud,"阿里云盘",ConnType.ALI_CLOUD),
-        Item(R.drawable.mega,"Mega",ConnType.MEGA),
-        Item(R.drawable.jellyfin,"Jellyfin",ConnType.JELLYFIN),
-        Item(R.drawable.emby,"Emby",ConnType.EMBY),
-    )
-
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth().height(56.dp)
@@ -96,7 +96,7 @@ fun AddConnectionScreen(navController: NavController) {
             Spacer(modifier = Modifier.width(8.dp))
         }
 
-        GridList(list,navController)
+        GridList(connTypeList,navController)
     }
 }
 
