@@ -101,7 +101,7 @@ fun AddConnectionScreen(navController: NavController) {
 }
 
 @Composable
-fun GridList(items: List<Item>,navController: NavController) {
+private fun GridList(items: List<Item>,navController: NavController) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(3), // 2列网格
         modifier = Modifier.fillMaxSize().padding(top = 10.dp, bottom = 10.dp),
@@ -116,7 +116,7 @@ fun GridList(items: List<Item>,navController: NavController) {
 }
 
 @Composable
-fun GridItem(item: Item,navController: NavController) {
+private fun GridItem(item: Item,navController: NavController) {
 //    Card(
 //        modifier = Modifier
 //            .fillMaxWidth()

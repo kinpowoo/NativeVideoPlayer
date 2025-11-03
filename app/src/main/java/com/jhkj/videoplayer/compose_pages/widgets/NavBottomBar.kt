@@ -1,6 +1,8 @@
 package com.jhkj.videoplayer.compose_pages.widgets
 
+import android.net.Uri
 import android.os.Build
+import android.text.TextUtils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -51,7 +53,9 @@ import com.jhkj.videoplayer.compose_pages.pages.ConnType
 import com.jhkj.videoplayer.compose_pages.pages.ConnectionEditScreen
 import com.jhkj.videoplayer.compose_pages.pages.ConnectionsScreen
 import com.jhkj.videoplayer.compose_pages.pages.HomeScreen
+import com.jhkj.videoplayer.compose_pages.pages.WebdavEntryScreen
 import com.jhkj.videoplayer.compose_pages.router.ParamsConfig
+import com.jhkj.videoplayer.utils.GsonUtils
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     data object Home : Screen(RouterName.Home.name, "Home", Icons.Outlined.Home)
@@ -72,6 +76,7 @@ sealed class RouterName(val name:String){
     data object Profile : RouterName("profile")
     data object AddConnection : RouterName("add_connection")
     data object EditConnection : RouterName("edit_connection")
+    data object WebdavEntry : RouterName("webdav_entry")
 }
 
 class AppState(navController: NavHostController) {
@@ -113,7 +118,7 @@ fun NavBottomBar() {
             composable("${RouterName.EditConnection.name}/{${ConnConfig.PARAMS_NAME}}/{${ConnConfig.PARAMS_FLAG}}/{connType}",
                 arguments = listOf(
                     navArgument(ParamsConfig.PARAMS_NAME) {
-                        type = NavType.ParcelableType(ConnInfo::class.java)
+                        type = NavType.StringType
                         nullable = true
                     },//参数是String类型可以不用额外指定，这句不写也是可以的
                     navArgument(ConnConfig.PARAMS_FLAG) {
@@ -127,14 +132,33 @@ fun NavBottomBar() {
                     }
                 )
             ) { backStackEntry ->
-                val user:ConnInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    backStackEntry.arguments?.getParcelable(ConnConfig.PARAMS_NAME,ConnInfo::class.java)
-                } else {
-                    backStackEntry.arguments?.getParcelable(ConnConfig.PARAMS_NAME)
+                val connStr = backStackEntry.arguments?.getString(ConnConfig.PARAMS_NAME,"")
+                var connInfo: ConnInfo? = null
+                if(!TextUtils.isEmpty(connStr)){
+                    connInfo = GsonUtils.objFromJson(connStr, ConnInfo::class.java)
                 }
                 val isEdit = backStackEntry.arguments?.getBoolean(ConnConfig.PARAMS_FLAG) ?: false
                 //通过composable函数中提供的NavBackStackEntry提取参数
-                ConnectionEditScreen(user,isEdit,navController)
+                ConnectionEditScreen(connInfo,isEdit,navController)
+            }
+            //必传参数，使用"/"拼写在路由地址后面添加占位符
+            composable("${RouterName.WebdavEntry.name}/{${ConnConfig.PARAMS_NAME}}",
+                arguments = listOf(
+                    navArgument(ParamsConfig.PARAMS_NAME) {
+                        type = NavType.StringType
+                        nullable = true
+                    }
+                )
+            ) { backStackEntry ->
+                val connStr = backStackEntry.arguments?.getString(ConnConfig.PARAMS_NAME,"")
+                var connInfo: ConnInfo? = null
+                if(!TextUtils.isEmpty(connStr)){
+                    connInfo = GsonUtils.objFromJson(Uri.decode(connStr), ConnInfo::class.java)
+                }
+                connInfo?.let {
+                    //通过composable函数中提供的NavBackStackEntry提取参数
+                    WebdavEntryScreen(connInfo,navController)
+                }
             }
         }
         AnimatedVisibility(

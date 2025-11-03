@@ -41,4 +41,14 @@ class ConnInfoVm(application: Application) : AndroidViewModel(application) {
             connDao.delete(conn)
         }
     }
+
+    fun deleteConnById(id: Int) {
+        viewModelScope.launch {
+            connDao.deleteById(id)
+        }
+    }
+
+    suspend fun getConnBy(id: Int): ConnInfo? {
+        return connDao.getConnInfoById(id)
+    }
 }

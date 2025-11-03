@@ -44,9 +44,9 @@ fun CustomTextField(modifier: Modifier = Modifier,
 
     BasicTextField(
         value = text,
-        onValueChange = {
-            if(isEditable && it.length <= maxLength) {
-                onValueChange?.invoke(it)
+        onValueChange = { str ->
+            if(isEditable && str.length <= maxLength) {
+                onValueChange?.invoke(str)
             }},
         singleLine = singleLine,
         enabled = isEditable,

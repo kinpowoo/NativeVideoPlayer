@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jhkj.videoplayer.compose_pages.models.ConnInfo
+import com.thegrizzlylabs.sardineandroid.DavResource
 import com.thegrizzlylabs.sardineandroid.Sardine
 import com.thegrizzlylabs.sardineandroid.impl.OkHttpSardine
 import io.ktor.client.HttpClient
@@ -16,6 +17,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.serialization.gson.gson
 import kotlinx.coroutines.launch
+import java.io.BufferedInputStream
 import java.io.IOException
 
 
@@ -59,46 +61,40 @@ class WebdavViewModel : ViewModel() {
     }
 
     private fun getFullUrl(conn:ConnInfo):String{
-        val protocol = conn.protocol
+        val protocol = conn.protocol.lowercase()
         val host = conn.domain
         val port = conn.port
-        val path = conn.path
-        if(TextUtils.isEmpty(path)){
-            if(path!!.startsWith("/")) {
-                return "$protocol://$host:$port$path"
-            }else{
-                return "$protocol://$host:$port/$path"
-            }
-        }else{
-            return "$protocol://$host:$port"
-        }
+        return "$protocol://$host:$port"
     }
 
     private val client: Sardine = OkHttpSardine()
 
     fun checkUrl(conn:ConnInfo):Boolean{
         client.setCredentials(conn.username,conn.pass)
-        val url = getFullUrl(conn)
+        var url = getFullUrl(conn)
+        url += "/"
         try {
-            val inputStream = client.get(url)
-            if (inputStream != null) {
-                // 尝试读取一个字节（使用 mark/reset 不消耗数据）
-                inputStream.mark(1)
-                val byteRead = inputStream.read()
-                inputStream.reset()
-
-                if (byteRead != -1) {
-                    // 连接是活跃的
-                    return true
-                } else {
-                    // 连接可能已断开
-                    return false
-                }
+            val files:List<DavResource>? = client.list(url)
+            if (files != null) {
+                return true
             }
             return false
         } catch (e: IOException) {
             // 连接已断开
             return false
+        }
+    }
+
+    fun listPath(conn:ConnInfo,path:String):List<DavResource>?{
+        client.setCredentials(conn.username,conn.pass)
+        val baseUrl = getFullUrl(conn)
+        val url = baseUrl + path
+        try {
+            val files:List<DavResource>? = client.list(url)
+            return files
+        } catch (e: IOException) {
+            // 连接已断开
+            return null
         }
     }
 

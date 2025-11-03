@@ -74,16 +74,6 @@ fun ConnectionEditScreen(connDto:ConnInfo?, isEdit:Boolean, navController: NavCo
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    if(connDto != null){
-        displayName = connDto.displayName
-        host = connDto.domain
-        path = connDto.path ?: ""
-        port = connDto.port.toString()
-        protocol = connDto.protocol
-        username = connDto.username
-        password = connDto.pass
-    }
-
     fun connInfoInputChange(){
         val a1 = displayName.isEmpty()
         val a2 = host.isEmpty()
@@ -98,6 +88,19 @@ fun ConnectionEditScreen(connDto:ConnInfo?, isEdit:Boolean, navController: NavCo
             }else{
                 fullURL = "$lowercaseProtocol://$host:$port"
             }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if(connDto != null){
+            displayName = connDto.displayName
+            host = connDto.domain
+            path = connDto.path ?: ""
+            port = connDto.port.toString()
+            protocol = connDto.protocol
+            username = connDto.username
+            password = connDto.pass
+            connInfoInputChange()
         }
     }
 
