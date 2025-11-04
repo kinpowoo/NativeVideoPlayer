@@ -14,7 +14,6 @@ import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -24,6 +23,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import com.jhkj.gl_player.PlayerFragment
+import com.jhkj.gl_player.model.WebdavResource
 import com.jhkj.gl_player.util.DensityUtil
 import com.jhkj.gl_player.util.ImmersiveStatusBarUtils
 import com.jhkj.videoplayer.R
@@ -134,7 +134,16 @@ class VideoPlayerActivity : AppCompatActivity(){
             playerFragment?.loadUrl(path)
 //            Toast.makeText(this, "获得path:$path", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(this, "外部传入的uri为null", Toast.LENGTH_SHORT).show()
+//            Toast.makeText(this, "外部传入的uri为null", Toast.LENGTH_SHORT).show()
+            //处理webdav数据
+            val connInfo: WebdavResource? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getSerializableExtra("webdav", WebdavResource::class.java)
+            }else{
+                intent.getSerializableExtra("webdav") as? WebdavResource
+            }
+            if(connInfo != null){
+                playerFragment?.loadWebdav(connInfo)
+            }
         }
     }
 

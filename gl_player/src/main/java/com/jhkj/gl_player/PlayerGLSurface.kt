@@ -7,6 +7,7 @@ import android.graphics.SurfaceTexture.OnFrameAvailableListener
 import android.net.Uri
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
+import com.jhkj.gl_player.model.WebdavResource
 
 class PlayerGLSurface : GLSurfaceView, OnFrameAvailableListener {
     private var render: MediaGLRenderer? = null
@@ -42,6 +43,18 @@ class PlayerGLSurface : GLSurfaceView, OnFrameAvailableListener {
         return render?.isPlaying() ?: false
     }
 
+    fun isBuffering():Boolean {
+        return render?.isBuffering() ?: false
+    }
+
+    fun isSpeedSupport():Boolean {
+        return render?.isSpeedSupport() ?: false
+    }
+
+    fun setPlaybackSpeed(speed:Float){
+        render?.setPlaybackSpeed(speed)
+    }
+
     fun switchPlayState(){
         if(render?.isPrepared() == true){
             if(render?.isPlaying() == true){
@@ -73,12 +86,20 @@ class PlayerGLSurface : GLSurfaceView, OnFrameAvailableListener {
         render?.loadUri(uri)
     }
 
+    fun loadWebdav(conn: WebdavResource){
+        render?.loadWebdav(conn)
+    }
+
     fun pausePlay(){
         render?.pausePlay()
     }
 
     fun seekTo(percent:Float){
         render?.seekTo(percent)
+    }
+
+    fun forwardOrBackward(seconds:Int,forward: Boolean){
+        render?.forwardOrBackward(seconds,forward)
     }
 
     fun switchVolume(){

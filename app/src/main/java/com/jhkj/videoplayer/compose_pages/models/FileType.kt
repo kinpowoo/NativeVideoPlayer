@@ -1,9 +1,77 @@
 package com.jhkj.videoplayer.compose_pages.models
 
+import android.content.Context
+import android.content.Intent
+import com.jhkj.gl_player.model.WebdavResource
 import com.jhkj.videoplayer.R
+import com.jhkj.videoplayer.player.VideoPlayerActivity
+import com.thegrizzlylabs.sardineandroid.DavResource
 
 
 object FileType{
+    const val oneKb = 1024
+    const val oneM = 1024*1024
+    const val oneG = 1024*1024*1024
+    const val oneT = 1024*1024*1024*1024
+
+    fun calcSize(size:Long):String{
+        if(size < oneKb){
+            val numB = size
+            return "${numB}b"
+        }else if(size < oneM){
+            val numKB = size / oneKb
+            return "${numKB}KB"
+        } else if(size < oneG){
+            val numM = size % oneM
+            val numKB = size / oneKb
+            return "${numM}G${numKB}M"
+        }else {
+            val numG = size % oneG
+            val numM = size / oneM
+            return "${numG}G${numM}M"
+        }
+//        else{
+//            val numT = size % oneT
+//            val numG = size / oneG
+//            return "${numT}T${numG}G"
+//        }
+    }
+
+    fun doFileOpenAction(context: Context,item:DavResource,connDto: ConnInfo){
+        val name:String = item.name
+        val resPath = item.path
+        if(isMovie(name)){
+            val intent = Intent(context, VideoPlayerActivity::class.java)
+            val info = WebdavResource(connDto.displayName,
+                connDto.domain,resPath,
+                connDto.protocol,connDto.port,
+                connDto.username,connDto.pass)
+            intent.putExtra("webdav",info)
+            context.startActivity(intent)
+        }else if(isMusic(name)){
+
+        }else if(isPhoto(name)){
+
+        }else if(isText(name)){
+
+        }else if(isBook(name)){
+
+        }else if(isGif(name)){
+
+        }else if(isWord(name)){
+
+        }else if(isExcel(name)){
+
+        }else if(isPdf(name)){
+
+        }else if(isZip(name)) {
+        }
+        else{
+
+        }
+    }
+
+
     fun getFileIdentity(name:String):Int{
         if(isMovie(name)){
             return R.drawable.file_video
@@ -46,7 +114,8 @@ object FileType{
                 lower.endsWith(".flac") ||
                 lower.endsWith(".wav") ||
                 lower.endsWith(".aac") ||
-                lower.endsWith(".dst")
+                lower.endsWith(".dst") ||
+                lower.endsWith(".ape")
     }
 
     fun isText(name:String): Boolean{

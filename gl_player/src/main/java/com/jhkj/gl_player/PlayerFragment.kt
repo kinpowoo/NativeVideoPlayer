@@ -5,17 +5,20 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Rect
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
@@ -23,7 +26,9 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.jhkj.gl_player.fragment.PlayerBaseFragment
+import com.jhkj.gl_player.model.WebdavResource
 import com.jhkj.gl_player.util.DensityUtil
+import com.jhkj.gl_player.util.SpeedDialog
 import com.jhkj.gl_player.util.StatusBarTool
 import java.lang.ref.WeakReference
 import java.util.Locale
@@ -42,6 +47,9 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var forwardIcon:ImageView? = null
     private var targetTime:TextView? = null
 
+    //缓冲
+    private var bufferingBox:ConstraintLayout? = null
+
     //亮度和音量
     private var brightnessBox:ConstraintLayout? = null
     private var brightnessIcon:ImageView? = null
@@ -53,6 +61,9 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var playBtn:ImageView? = null
     private var muteBtn:ImageView? = null
     private var scaleBtn:ImageView? = null
+    private var speedBtn:ImageView? = null
+    private var backwardBtn:ImageView? = null
+    private var forwardBtn:ImageView? = null
     private var progressText:TextView? = null
     private var progressBar:ProgressBar? = null
     private var oldW = 0
@@ -67,8 +78,12 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var vh:Int = 0
     private var sw:Int = 0
     private var sh:Int = 0
+    private var playSpeed = 1.0f
+    private var speedDialog: SpeedDialog? = null
+
     private var audioManager:AudioManager? = null
-    public var initListener:WeakReference<Runnable>? = null
+    var initListener:WeakReference<Runnable>? = null
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -113,6 +128,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         toolbarBox = view.findViewById(R.id.toolbar_box)
         forwardBox = view.findViewById(R.id.forward_box)
         forwardIcon = view.findViewById(R.id.direction_icon)
+        bufferingBox = view.findViewById(R.id.buffering_box)
         targetTime = view.findViewById(R.id.target_time)
         brightnessBox = view.findViewById(R.id.brightness_box)
         brightnessIcon = view.findViewById(R.id.brightness_icon)
@@ -131,12 +147,21 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         playBtn = view.findViewById(R.id.start_btn)
         muteBtn = view.findViewById(R.id.voice_btn)
         scaleBtn = view.findViewById(R.id.scale_btn)
+        speedBtn = view.findViewById(R.id.speed_icon)
+        backwardBtn = view.findViewById(R.id.backward_30)
+        forwardBtn = view.findViewById(R.id.forward_30)
         progressText = view.findViewById(R.id.time)
         progressBar = view.findViewById(R.id.progress_bar)
         oldW = view.layoutParams.width
         oldH = view.layoutParams.height
 
         initListener?.get()?.run()
+
+        if(glPlayer?.isSpeedSupport() ?: false){
+            speedBtn?.visibility = View.VISIBLE
+        }else{
+            speedBtn?.visibility = View.GONE
+        }
     }
 
     private fun setListener(view:View){
@@ -195,11 +220,11 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
             }
 
             override fun bufferingStart() {
-
+                bufferingBox?.visibility = View.VISIBLE
             }
 
             override fun bufferingStop() {
-
+                bufferingBox?.visibility = View.GONE
             }
         })
         glPlayer?.setVolumeStateListener(object:VolumeStateListener{
@@ -260,6 +285,57 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                 toolbarBox?.visibility = View.GONE
             }
         }
+
+        speedBtn?.setOnClickListener {
+            if(isDoubleClick(it))return@setOnClickListener
+            showSpeedDialog()
+        }
+        backwardBtn?.setOnClickListener {
+            if(isDoubleClick(it))return@setOnClickListener
+            glPlayer?.forwardOrBackward(30,false)
+        }
+        forwardBtn?.setOnClickListener {
+            if(isDoubleClick(it))return@setOnClickListener
+            glPlayer?.forwardOrBackward(30,true)
+        }
+    }
+
+    fun showSpeedDialog(){
+        if (speedDialog == null) {
+            val layout = LayoutInflater.from(requireContext()).inflate(
+                R.layout.speed_layout, null
+            )
+            speedDialog = SpeedDialog(
+                layout, LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+//            speedDialog?.setOnDismissListener {
+//                darkWindows(1f)
+//            }
+            speedDialog?.setSpeedCallback {
+                this@PlayerFragment.playSpeed = it
+                this@PlayerFragment.glPlayer?.setPlaybackSpeed(it)
+            }
+        }
+        speedDialog?.isFocusable = true //设置焦点生效
+        speedDialog?.isOutsideTouchable = true
+        val r = Rect()
+        speedBtn?.getGlobalVisibleRect(r)
+        speedDialog?.setSpeed(playSpeed)
+//        speedDialog?.showAtLocation(
+//            speedBtn, Gravity.END or Gravity.TOP,
+//            r.left, r.bottom
+//        )
+        speedDialog?.showAsDropDown(
+            speedBtn, r.width(),0,Gravity.END
+        )
+//        darkWindows(0.5f)
+    }
+
+    private fun darkWindows(alpha:Float){
+        val lp = activity?.window?.attributes
+        lp?.alpha = alpha
+        activity?.window?.attributes = lp
     }
 
     fun loadUrl(url:String){
@@ -267,6 +343,10 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     }
     fun loadUri(uri: Uri){
         glPlayer?.loadUri(uri)
+    }
+
+    fun loadWebdav(conn: WebdavResource){
+        glPlayer?.loadWebdav(conn)
     }
 
 
@@ -441,19 +521,19 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                     lastMoveY = event.y
                     dx = lastMoveX - x_down
                     dy = lastMoveY - y_down
-                    if(abs(dx) > abs(dy) && abs(dx) > 5) {  // x 轴称动距离超过10，响应它
+                    if(abs(dx) > abs(dy) && abs(dx) > 50 && abs(dy) < 30) {  // x 轴称动距离超过10，响应它
                         if(actionMode == ActionMode.NONE) {
-                            if (dx > 3) {
+                            if (dx > 50) {
                                 actionMode = ActionMode.FastForward
                                 forwardBox?.visibility = View.VISIBLE
                             }
-                            if (dx < -3) {
+                            if (dx < -50) {
                                 actionMode = ActionMode.FastBackward
                                 forwardBox?.visibility = View.VISIBLE
                             }
                         }
                         handleTouchEvent()
-                    }else if(abs(dy) > abs(dx) && abs(dy) > 5){ // y 轴称动距离超过10，响应它
+                    }else if(abs(dy) > abs(dx) && abs(dy) > 30){ // y 轴称动距离超过10，响应它
                         if(actionMode == ActionMode.NONE) {
                             if (isLeftSide) {
                                 actionMode = ActionMode.AdjustBrightness
@@ -626,7 +706,10 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         second = 0
         activity?.runOnUiThread {
             if(!isControlPanelVisible){
-                visibleControlPanel()
+                val isBuffering = glPlayer?.isBuffering() ?: false
+                if(!isBuffering) {
+                    visibleControlPanel()
+                }
             }else{
                 dismissControlPanel()
             }
@@ -636,4 +719,16 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private fun doubleClickHandle(){
         glPlayer?.pauseOrResume()
     }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        cancelTimeTask()
+    }
+
+    override fun onDestroy() {
+        cancelTimeTask()
+        glPlayer?.release()
+        super.onDestroy()
+    }
+
 }
