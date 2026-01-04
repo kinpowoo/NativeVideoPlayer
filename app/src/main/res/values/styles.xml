@@ -44,5 +44,8 @@
         <item name="android:listPreferredItemHeightSmall">56dp</item>
     </style>
 
+    <style name="SlideTopBottomTheme" parent="AppTheme">
+        <item name="android:windowAnimationStyle">@style/SlideTopBottom</item>
+    </style>
 
 </resources>

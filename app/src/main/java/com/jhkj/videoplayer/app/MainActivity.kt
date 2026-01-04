@@ -1,268 +1,210 @@
 package com.jhkj.videoplayer.app
 
-import android.os.Build
+import android.content.Intent
 import android.os.Bundle
-import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
-import androidx.navigation.NavController
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import androidx.navigation.navDeepLink
-import com.jhkj.videoplayer.compose_pages.pages.MainPage
-import com.jhkj.videoplayer.compose_pages.router.ParamsConfig
-import com.jhkj.videoplayer.compose_pages.router.RouteConfig
-import com.jhkj.videoplayer.compose_pages.widgets.NavBottomBar
-import com.jhkj.videoplayer.theme.CustomTypography
-import com.jhkj.videoplayer.theme.DarkColorScheme
-import com.jhkj.videoplayer.theme.LightColorScheme
+import android.view.MenuItem
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentTransaction
+import com.google.android.material.navigation.NavigationBarView
+import com.jhkj.gl_player.fragment.IFragmentVisibility
+import com.jhkj.videoplayer.R
+import com.jhkj.videoplayer.databinding.MainLayoutBinding
+import com.jhkj.videoplayer.fragments.ConnectionsFragment
+import com.jhkj.videoplayer.fragments.HomeFragment
+import com.jhkj.videoplayer.fragments.ProfileFragment
 import com.jhkj.videoplayer.utils.ImmersiveStatusBarUtils
 
-class MainActivity : AppCompatActivity() {
-    val URI = "my-app://my.example.app"
+
+class MainActivity : BaseActivity() {
+    private var binding: MainLayoutBinding? = null
+    private val fragmentList: MutableList<Fragment> = mutableListOf()
+    private var homeFragment: HomeFragment? = null
+    private var connFragment: ConnectionsFragment? = null
+    private var profileFragment: ProfileFragment? = null
+    private val savedCurrentID = "currentId"
+    private var currentId: Int = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        binding = MainLayoutBinding.inflate(layoutInflater)
+        setContentView(binding!!.root)
 //        ImmersiveStatusBarUtils.setImmersiveStatusBar(this)
-        ImmersiveStatusBarUtils.setFullScreen(this,true)
+        ImmersiveStatusBarUtils.setFullScreen(this, true)
+
+        //初始化fragments
+        initFragments(savedInstanceState)
 
         supportActionBar?.hide()
 
-        setContent {
-            AppTheme{
-                MainPage()
-            }
-        }
-    }
-
-
-    @Composable
-    fun AppTheme(content: @Composable () -> Unit) {
-        val darkTheme: Boolean = isSystemInDarkTheme()
-        val colorScheme = when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                val context = LocalContext.current
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            }
-
-            darkTheme -> DarkColorScheme
-            else -> LightColorScheme
-        }
-
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = CustomTypography,
-            content = {
-                NavBottomBar()
-            }
+        binding?.bottomNavigationView?.setOnItemSelectedListener(mOnNavigationItemSelectedListener)
+        binding?.bottomNavigationView?.setOnItemReselectedListener(
+            mOnNavigationItemReselectedListener
         )
     }
 
 
-    @Composable
-    fun NavHostDemo() {
-        val navController = rememberNavController()
-        NavHost(navController = navController, startDestination = RouteConfig.ROUTE_PAGE_ONE) {
-            //普通跳转无参数
-            composable(RouteConfig.ROUTE_PAGE_ONE) {
-                PageOne(navController)
+    private val mOnNavigationItemSelectedListener
+            : NavigationBarView.OnItemSelectedListener =
+        object : NavigationBarView.OnItemSelectedListener {
+            override fun onNavigationItemSelected(item: MenuItem): Boolean {
+                val itemId = item.itemId
+                if (itemId == R.id.navigation_home) {
+                    switchFragment(0)
+                    return true
+                }
+                if (itemId == R.id.navigation_conn) {
+                    switchFragment(1)
+                    return true
+                }
+                if (itemId == R.id.navigation_profile) {
+                    switchFragment(2)
+                    return true
+                }
+                return false
             }
-            //必传参数，使用"/"拼写在路由地址后面添加占位符
-            composable("${RouteConfig.ROUTE_PAGE_TWO}/{${ParamsConfig.PARAMS_NAME}}/{${ParamsConfig.PARAMS_AGE}}",
-                arguments = listOf(
-                    navArgument(ParamsConfig.PARAMS_NAME) {},//参数是String类型可以不用额外指定，这句不写也是可以的
-                    navArgument(ParamsConfig.PARAMS_AGE) {
-                        type = NavType.IntType //指定具体类型
-                        defaultValue = 25 //默认值（选配）
-                        nullable = false  //可否为null（选配）
-                    }
-                )
-            ) {
-                //通过composable函数中提供的NavBackStackEntry提取参数
-                val argument = requireNotNull(it.arguments)
-                val name = argument.getString(ParamsConfig.PARAMS_NAME)
-                val age = argument.getInt(ParamsConfig.PARAMS_AGE)
-                PageTwo(name, age, navController)
+        }
+
+    private val mOnNavigationItemReselectedListener
+            : NavigationBarView.OnItemReselectedListener =
+        object : NavigationBarView.OnItemReselectedListener {
+            override fun onNavigationItemReselected(item: MenuItem) {
+                if (item.itemId == R.id.navigation_home) {
+
+                }else if (item.itemId == R.id.navigation_conn) {
+
+                }else if (item.itemId == R.id.navigation_profile) {
+
+                }
             }
-            //可选参数，使用"?argName={argName}&argName2={argName2}"拼接，跟浏览器地址栏的可选参数一样，第一个用?拼接，后续用&拼接
-            composable("${RouteConfig.ROUTE_PAGE_THREE}?${ParamsConfig.PARAMS_NAME}={${ParamsConfig.PARAMS_NAME}}&${ParamsConfig.PARAMS_AGE}={${ParamsConfig.PARAMS_AGE}}",
-                arguments = listOf(
-                    navArgument(ParamsConfig.PARAMS_NAME) {
-                        nullable = true
-                    },
-                    navArgument(ParamsConfig.PARAMS_AGE) {
-                        type = NavType.IntType //指定具体类型
-                        defaultValue = 25 //默认值（选配）
-                        nullable = false  //可否为null（选配）
-                    }
-                )) {
-                //通过composable函数中提供的NavBackStackEntry提取参数
-                val argument = requireNotNull(it.arguments)
-                val name = argument.getString(ParamsConfig.PARAMS_NAME)
-                val age = argument.getInt(ParamsConfig.PARAMS_AGE)
-                PageThree(name, age, navController)
+        }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        switchFragment(0)
+    }
+
+    private fun switchFragment(index: Int) {
+        if (currentId == index) return
+//        if (index == 0) {
+//            binding?.bottomNavigationView?.selectedItemId = R.id.navigation_home
+//        }
+//        if (index == 1) {
+//            binding?.bottomNavigationView?.selectedItemId = R.id.navigation_conn
+//        }
+//        if (index == 2) {
+//            binding?.bottomNavigationView?.selectedItemId = R.id.navigation_profile
+//        }
+        when (index) {
+            0 -> {
+                if (homeFragment == null) {
+                    homeFragment = HomeFragment()
+                }
+                addFragment(homeFragment!!, HomeFragment::class.java.name)
+                showFragment(homeFragment!!)
             }
-            //深度链接 DeepLink
-            composable("${RouteConfig.ROUTE_PAGE_FOUR}?${ParamsConfig.PARAMS_NAME}={${ParamsConfig.PARAMS_NAME}}&${ParamsConfig.PARAMS_AGE}={${ParamsConfig.PARAMS_AGE}}",
-                arguments = listOf(
-                    navArgument(ParamsConfig.PARAMS_NAME) {
-                        nullable = true
-                    },
-                    navArgument(ParamsConfig.PARAMS_AGE) {
-                        type = NavType.IntType //指定具体类型
-                        defaultValue = 25 //默认值（选配）
-                        nullable = false  //可否为null（选配）
-                    }
-                ),
-                deepLinks = listOf(navDeepLink {
-                    uriPattern = "$URI/{${ParamsConfig.PARAMS_NAME}}/{${ParamsConfig.PARAMS_AGE}}"
-                })
-            ) {
-                //通过composable函数中提供的NavBackStackEntry提取参数
-                val argument = requireNotNull(it.arguments)
-                val name = argument.getString(ParamsConfig.PARAMS_NAME)
-                val age = argument.getInt(ParamsConfig.PARAMS_AGE)
-                PageFour(name, age, navController)
+
+            1 -> {
+                if (connFragment == null) {
+                    connFragment = ConnectionsFragment()
+                }
+                addFragment(connFragment!!, ConnectionsFragment::class.java.name)
+                showFragment(connFragment!!)
             }
+
+            2 -> {
+                if (profileFragment == null) {
+                    profileFragment = ProfileFragment()
+                }
+                addFragment(profileFragment!!, ProfileFragment::class.java.name)
+                showFragment(profileFragment!!)
+            }
+        }
+        currentId = index
+    }
+
+    /*添加fragment*/
+    private fun addFragment(fragment: Fragment, tag: String) {
+        /*判断该fragment是否已经被添加过  如果没有被添加  则添加*/
+        if (!fragment.isAdded && null == supportFragmentManager.findFragmentByTag(tag)) {
+            val transaction: FragmentTransaction = supportFragmentManager.beginTransaction()
+            //commit方法是异步的，调用后不会立即执行，而是放到UI任务队列中
+            transaction.add(R.id.content_container, fragment, tag).commit()
+            //让commit动作立即执行
+            supportFragmentManager.executePendingTransactions()
+            /*添加到 fragmentList*/
+            addToList(fragment)
         }
     }
 
-    @Composable
-    fun PageOne(navController: NavController) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Color.White
-                )
-        ) {
-            Text(text = "这是页面1")
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = {
-                //普通跳转
-//                navController.navigate(RouteConfig.ROUTE_PAGE_TWO)
-                //携带参数跳转，必传参数必须传，不传会crash
-                navController.navigate("${RouteConfig.ROUTE_PAGE_TWO}/this is name/12")
-            }) {
-                Text(
-                    text = "跳转页面2",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            }
+    private fun addToList(fragment: Fragment?) {
+        if (fragment != null && !fragmentList.contains(fragment)) {
+            fragmentList.add(fragment)
         }
     }
 
-
-    @Composable
-    fun PageTwo(name: String?, age: Int, navController: NavController) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Color.White
-                )
-        ) {
-            Text(text = "这是页面2")
-            Text(text = "name:$name,age:$age")
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = {
-                // 在进入RouteConfig.ROUTE_PAGE_THREE之前，回退栈会弹出所有的可组合项，直到 RouteConfig.ROUTE_PAGE_ONE
-//                navController.navigate(RouteConfig.ROUTE_PAGE_THREE) {
-//                    popUpTo(RouteConfig.ROUTE_PAGE_ONE)
-//                }
-                // 在进入RouteConfig.ROUTE_PAGE_THREE之前，回退栈会弹出所有的可组合项，直到 RouteConfig.ROUTE_PAGE_ONE，并且包括它
-//                navController.navigate(RouteConfig.ROUTE_PAGE_THREE) {
-//                    popUpTo(RouteConfig.ROUTE_PAGE_ONE) { inclusive = true }
-//                }
-                // 对应 Android 的 SingleTop，如果回退栈顶部已经是 RouteConfig.ROUTE_PAGE_THREE，就不会重新创建
-//                navController.navigate(RouteConfig.ROUTE_PAGE_THREE) {
-//                    launchSingleTop = true
-//                }
-                //携带可选参数跳转
-                navController.navigate("${RouteConfig.ROUTE_PAGE_THREE}?${ParamsConfig.PARAMS_NAME}=demo&${ParamsConfig.PARAMS_AGE}=15")
-            }) {
-                Text(
-                    text = "跳转页面3",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
+    /*显示fragment*/
+    private fun showFragment(fragment: Fragment) {
+        for (frag in fragmentList) {
+            if (frag !== fragment) {
+                /*先隐藏其他fragment*/
+                supportFragmentManager.beginTransaction().hide(frag).commit()
             }
+        }
+        if (fragment is IFragmentVisibility) {
+            if (fragment.isVisibleToUser()) return
+        }
+        supportFragmentManager.beginTransaction().show(fragment).commit()
+    }
+
+    private fun initFragments(savedInstanceState: Bundle?) {
+        if (savedInstanceState != null) {
+            /*获取保存的fragment  没有的话返回null*/
+            homeFragment = supportFragmentManager.getFragment(
+                savedInstanceState,
+                HomeFragment::class.java.name
+            ) as HomeFragment?
+            connFragment = supportFragmentManager.getFragment(
+                savedInstanceState,
+                ConnectionsFragment::class.java.name
+            ) as ConnectionsFragment?
+            profileFragment = supportFragmentManager.getFragment(
+                savedInstanceState,
+                ProfileFragment::class.java.name
+            ) as ProfileFragment?
+            val cachedId = savedInstanceState.getInt(savedCurrentID, 0)
+            if (cachedId in 0..3) {
+                currentId = cachedId
+            }
+            addToList(homeFragment)
+            addToList(connFragment)
+            addToList(profileFragment)
+            switchFragment(currentId)
+        } else {
+            switchFragment(0)
         }
     }
 
-    @Composable
-    fun PageThree(name: String?, age: Int, navController: NavController) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Color.White
-                )
-        ) {
-            Text(text = "这是页面3")
-            Text(text = "name:$name,age:$age")
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = {
-//                navController.navigateUp()    //返回上一级界面
-//                navController.popBackStack()  //可以指定返回的界面（不指定就相当于navigateUp()）。
-                //深度链接匹配跳转
-                navController.navigate("$URI/deeplink/123".toUri())
-            }) {
-                Text(
-                    text = "跳转页面4",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            }
+    override fun onSaveInstanceState(outState: Bundle) {
+        //通过onSaveInstanceState方法保存当前显示的fragment
+        if (homeFragment != null) {
+            supportFragmentManager.putFragment(
+                outState,
+                HomeFragment::class.java.name, homeFragment!!
+            )
         }
-    }
-
-    @Composable
-    fun PageFour(name: String?, age: Int, navController: NavController) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Color.White
-                )
-        ) {
-            Text(text = "这是页面4")
-            Text(text = "name:$name,age:$age")
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = {
-                navController.navigateUp()    //返回上一级界面
-//                navController.popBackStack()  //可以指定返回的界面（不指定就相当于navigateUp()）。
-            }) {
-                Text(
-                    text = "返回",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            }
+        if (connFragment != null) {
+            supportFragmentManager.putFragment(
+                outState,
+                ConnectionsFragment::class.java.name, connFragment!!
+            )
         }
+        if (profileFragment != null) {
+            supportFragmentManager.putFragment(
+                outState,
+                ProfileFragment::class.java.name, profileFragment!!
+            )
+        }
+        outState.putInt(savedCurrentID, currentId)
+        super.onSaveInstanceState(outState)
     }
-
 }

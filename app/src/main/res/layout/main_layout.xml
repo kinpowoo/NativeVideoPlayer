@@ -4,43 +4,24 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    android:background="#000000"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/top_bar"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <ImageView
-            android:contentDescription="@string/app_name"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="10dp"
-            android:layout_marginTop="10dp"
-            android:src="@drawable/app_name_logo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
     <FrameLayout
         android:id="@+id/content_container"
-        app:layout_constraintTop_toBottomOf="@+id/top_bar"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_navigation_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="0dp" />
 
-    <TextView
-        android:id="@+id/pick_video"
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation_view"
         app:layout_constraintTop_toBottomOf="@+id/content_container"
-        android:layout_marginTop="10dp"
-        android:translationZ="2dp"
-        android:gravity="center"
-        android:padding="10dp"
-        android:text="@string/pick_video"
-        android:background="@color/teal_700"
-        android:textSize="18sp"
-        android:textColor="#000000"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:menu="@menu/bottom_nav_menu"
+        app:itemRippleColor="@color/nav_bottom_ripple_color"
+        app:itemIconTint="@color/nav_bottom_title_text_color"
+        app:itemTextColor="@color/nav_bottom_title_text_color"
+        android:background="@color/primary_bg"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 

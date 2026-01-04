@@ -12,4 +12,27 @@
     <color name="primary_bg">#FFFFFF</color>
     <color name="primary_accent_bg">#F7F8FC</color>
     <color name="primary_light_bg">#F0EDE5</color>
+
+
+    <!-- 字体色系 -->
+    <color name="text_primary">#3C3B39</color>
+    <color name="text_purple">#998FCE</color>
+    <color name="text_green">#06DD6D</color>
+    <color name="text_primary_light">#666666</color>
+    <color name="text_btn">#FFFFFF</color>
+    <color name="text_btn_disable">#B3FFFFFF</color>
+    <color name="text_small_caption">#3C3B39</color>
+    <color name="text_popup">#666666</color>
+    <color name="text_menu">#80666666</color>
+    <color name="text_secondary">#AEAEAE</color>
+    <color name="text_third">#999999</color>
+    <color name="text_accent">#D0AF89</color>
+    <color name="text_negative_btn">#999999</color>
+    <color name="text_white">#FFFFFF</color>
+    <color name="text_toast">#FFFFFF</color>
+    <color name="text_hint">#66FFFFFF</color>
+    <color name="tag_text_unselect">#3C3B39</color>
+    <color name="tag_text_selected">#3C3B39</color>
+    <color name="logo_text">#3C3B39</color>
+
 </resources>

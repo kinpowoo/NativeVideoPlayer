@@ -24,7 +24,7 @@ interface ConnInfoDao {
     suspend fun deleteById(id: Int)
 
     @Query("SELECT * FROM ConnInfo")
-    fun getAllConnInfo(): Flow<List<ConnInfo>>  // 返回 Flow 以支持 Compose 响应式更新
+    suspend fun getAllConnInfo(): List<ConnInfo>  // 返回 Flow 以支持 Compose 响应式更新
 
     @Query("SELECT * FROM ConnInfo WHERE id = :id")
     suspend fun getConnInfoById(id: Int): ConnInfo?

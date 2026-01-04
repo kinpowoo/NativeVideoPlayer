@@ -1,5 +1,13 @@
 <resources>
     <string name="app_name">Orange Player</string>
+    <string name="image_holder">Image</string>
 
     <string name="pick_video">Pick Video</string>
+    <string name="home_tab">Home</string>
+    <string name="connection_tab">Connections</string>
+    <string name="profile_tab">Profile</string>
+    <string name="add_connection">Add Connection</string>
+    <string name="edit_connection">Edit Connection</string>
+    <string name="ali_connection">Ali Cloud Disk</string>
+    <string name="baidu_connection">Baidu NetDisk</string>
 </resources>

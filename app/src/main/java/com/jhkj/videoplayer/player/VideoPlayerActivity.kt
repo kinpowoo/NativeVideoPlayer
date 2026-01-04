@@ -13,7 +13,6 @@ import android.provider.MediaStore
 import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -28,7 +27,7 @@ import com.jhkj.gl_player.util.DensityUtil
 import com.jhkj.gl_player.util.ImmersiveStatusBarUtils
 import com.jhkj.videoplayer.R
 import com.jhkj.videoplayer.utils.ContentUriUtil
-import com.jhkj.videoplayer.databinding.MainLayoutBinding
+import com.jhkj.videoplayer.databinding.VideoPlayerLayoutBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -36,7 +35,7 @@ import java.lang.ref.WeakReference
 
 class VideoPlayerActivity : AppCompatActivity(){
     private var playerFragment: PlayerFragment? = null
-    private lateinit var binding: MainLayoutBinding
+    private lateinit var binding: VideoPlayerLayoutBinding
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private val mediaPermissions = arrayOf(
@@ -50,7 +49,7 @@ class VideoPlayerActivity : AppCompatActivity(){
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = MainLayoutBinding.inflate(layoutInflater)
+        binding = VideoPlayerLayoutBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         //获取屏幕初始方向
@@ -62,7 +61,7 @@ class VideoPlayerActivity : AppCompatActivity(){
 //        actionBar?.hide()
 //        supportActionBar?.hide()
 
-        findViewById<TextView>(R.id.pick_video).setOnClickListener{
+        binding.pickVideo.setOnClickListener{
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
                 if(!hasPermissions(this, mediaPermissions[0]) ||
                     !hasPermissions(this, mediaPermissions[1])){
@@ -103,11 +102,9 @@ class VideoPlayerActivity : AppCompatActivity(){
                 PackageManager.PERMISSION_GRANTED
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent?.let {
-            getIntentData()
-        }
+        getIntentData()
     }
 
 //    在用于接收分享的Activity里面加接收代码
