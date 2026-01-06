@@ -12,7 +12,13 @@
     <color name="primary_bg">#FFFFFF</color>
     <color name="primary_accent_bg">#F7F8FC</color>
     <color name="primary_light_bg">#F0EDE5</color>
+    <color name="input_bg">#F4F4F4</color>
+    <color name="split_bg">#EEEEEE</color>
+    <color name="input_bg_darker">#F0F0F0</color>
+    <color name="week_unselect_bg">#EEEEEE</color>
+    <color name="cancel_or_select_bg">#F5F5F5</color>
 
+    <color name="transparent">#00FFFFFF</color>
 
     <!-- 字体色系 -->
     <color name="text_primary">#3C3B39</color>

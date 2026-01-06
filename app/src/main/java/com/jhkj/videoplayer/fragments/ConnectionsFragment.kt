@@ -10,6 +10,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.jhkj.videoplayer.adapter.ConnListAdapter
 import com.jhkj.videoplayer.databinding.ConnFragmentLayoutBinding
+import com.jhkj.videoplayer.pages.ConnectionEditActivity
 import com.jhkj.videoplayer.pages.SelectConnTypeActivity
 import com.jhkj.videoplayer.viewmodels.ConnInfoVm
 
@@ -42,10 +43,13 @@ class ConnectionsFragment: VisibilityFragment() {
             val tent = Intent(requireContext(), SelectConnTypeActivity::class.java)
 //            val options = ActivityOptions.makeSceneTransitionAnimation(requireActivity())
             startActivity(tent)
+//            activity?.overridePendingTransition(0,0)
         }
 
         connAdapter = ConnListAdapter({ item,idx ->
-
+            val tent = Intent(requireContext(), ConnectionEditActivity::class.java)
+            tent.putExtra("connInfo",item)
+            startActivity(tent)
         }){ item,idx ->
 
         }
@@ -56,6 +60,13 @@ class ConnectionsFragment: VisibilityFragment() {
     override fun onVisibleFirst() {
         super.onVisibleFirst()
 
+        vm.getAllConn {
+            connAdapter?.addConn(it)
+        }
+    }
+
+    override fun onVisibleExceptFirst() {
+        super.onVisibleExceptFirst()
         vm.getAllConn {
             connAdapter?.addConn(it)
         }

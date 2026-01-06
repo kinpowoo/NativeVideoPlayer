@@ -1,0 +1,19 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <!-- 第二层：灰色背景（覆盖在上面） -->
+    <item android:bottom="1dp">
+        <shape>
+            <solid android:color="@color/input_bg" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+
+    <!-- 第一层：下边框（放在最底层） -->
+    <item android:height="1.5dp" android:gravity="bottom"> <!-- 根据需要调整距离 -->
+        <shape android:shape="rectangle">
+            <solid android:color="#9E9E9E"/> <!-- 下划线的颜色 -->
+            <size android:height="1.5dp"/> <!-- 下划线的高度 -->
+        </shape>
+    </item>
+</layer-list>

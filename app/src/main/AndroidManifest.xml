@@ -42,7 +42,7 @@
 
         <activity
             android:name=".pages.SelectConnTypeActivity"
-            android:theme="@style/SlideTopBottomTheme"
+            android:theme="@style/ScaleCenterTheme"
             android:configChanges="orientation|screenSize|layoutDirection|locale|uiMode|colorMode"
             tools:ignore="LockedOrientationActivity"/>
 
@@ -50,6 +50,7 @@
             android:name=".pages.ConnectionEditActivity"
             android:theme="@style/AppTheme"
             android:configChanges="orientation|screenSize|layoutDirection|locale|uiMode|colorMode"
+            android:windowSoftInputMode="adjustPan|stateHidden"
             tools:ignore="LockedOrientationActivity"/>
 
         <activity

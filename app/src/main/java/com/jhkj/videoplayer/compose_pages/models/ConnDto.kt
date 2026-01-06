@@ -22,12 +22,12 @@ object ConnConfig {
 @Entity(tableName = "ConnInfo")
 data class ConnInfo(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    @ColumnInfo(name = "display_name") val displayName:String,
-    @ColumnInfo(name = "domain") val domain:String,
-    @ColumnInfo(name = "path") val path:String?,
-    @ColumnInfo(name = "protocol") val protocol:String,
-    @ColumnInfo(name = "port") val port:Int,
-    @ColumnInfo(name = "username") val username:String,
-    @ColumnInfo(name = "pass") val pass:String,
-    @ColumnInfo(name = "conn_type") val connType:Int
+    @ColumnInfo(name = "display_name") var displayName:String,
+    @ColumnInfo(name = "domain") var domain:String,
+    @ColumnInfo(name = "path") var path:String?,
+    @ColumnInfo(name = "protocol") var protocol:String,
+    @ColumnInfo(name = "port") var port:Int,
+    @ColumnInfo(name = "username") var username:String,
+    @ColumnInfo(name = "pass") var pass:String,
+    @ColumnInfo(name = "conn_type") var connType:Int
 ): Serializable

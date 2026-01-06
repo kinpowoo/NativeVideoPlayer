@@ -1,51 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="ThemeSplashScreen" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="android:opacity">opaque</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="windowSplashScreenAnimationDuration">10000</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="splashScreenIconSize">@dimen/splashscreen_icon_size_no_background</item>
-        <item name="windowSplashScreenBackground">?android:colorBackground</item>
-        <item name="windowSplashScreenAnimatedIcon">@android:drawable/sym_def_app_icon</item>
+    <style name="SlideLeftRight" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:activityOpenExitAnimation">@anim/slide_out_left</item>
+        <item name="android:activityCloseEnterAnimation">@anim/slide_in_left</item>
+        <item name="android:activityCloseExitAnimation">@anim/slide_out_right</item>
     </style>
 
-    <style name="SplashTheme" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:windowBackground">@drawable/splash_bg</item>
+    <style name="SlideTopBottom" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/slide_in_bottom</item>
+        <item name="android:activityOpenExitAnimation">@anim/slide_out_top</item>
+        <item name="android:activityCloseEnterAnimation">@anim/slide_in_top</item>
+        <item name="android:activityCloseExitAnimation">@anim/slide_out_bottom</item>
     </style>
 
-    <style name="AppTheme" parent="SplashTheme">
-<!--        <item name="android:fontFamily">@font/yesteryear_regular</item>-->
-<!--        <item name="fontFamily">@font/yesteryear_regular</item>-->
-
-        <item name="android:fontFamily">@font/marckscript_regular</item>
-        <item name="fontFamily">@font/marckscript_regular</item>
-
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
-        <item name="android:windowDisablePreview">true</item>
-        <item name="android:animationDuration">0</item>
-        <!-- windowIsFloating 为 true 会导致底部导航栏无法隐藏  -->
-        <item name="android:windowIsFloating">false</item>
-<!--        <item name="android:windowFullscreen">true</item>-->
-        <item name="android:actionBarItemBackground">@null</item>
-        <item name="android:stateListAnimator">@null</item>
-        <!--  windowIsTranslucent会导致app进入首页时间停顿几秒，但是它会解决白屏黑屏的问题     -->
-        <item name="android:windowIsTranslucent">false</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-
-        <!--一行代码解决NavigationView的item的高度问题-->
-        <item name="android:listPreferredItemHeightSmall">56dp</item>
+    <style name="Animation.NoAnimation" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/no_animation</item>
+        <item name="android:activityOpenExitAnimation">@anim/no_animation</item>
+        <item name="android:activityCloseEnterAnimation">@anim/no_animation</item>
+        <item name="android:activityCloseExitAnimation">@anim/no_animation</item>
     </style>
 
-    <style name="SlideTopBottomTheme" parent="AppTheme">
-        <item name="android:windowAnimationStyle">@style/SlideTopBottom</item>
+    <style name="ScaleCenter" parent="@android:style/Animation.Activity">
+        <!-- 新页面进入的动画（A->B时，B进入）-->
+        <item name="android:activityOpenEnterAnimation">@anim/scale_in_center</item>
+        <!-- 旧页面退出的动画（A->B时，A退出） -->
+        <item name="android:activityOpenExitAnimation">@anim/no_animation</item>
+        <!-- 旧页面重新进入的动画（B->A时，A返回进入） -->
+        <item name="android:activityCloseEnterAnimation">@anim/no_animation</item>
+        <!-- 新页面退出的动画（B->A时，B退出） -->
+        <item name="android:activityCloseExitAnimation">@anim/scale_out_center</item>
+    </style>
+
+    <style name="AlertDialogStyle" parent="Theme.AppCompat.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowFrame">@null</item>
+        <item name="android:backgroundDimAmount">0.5</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
     </style>
 
 </resources>

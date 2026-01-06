@@ -5,9 +5,11 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.view.View
-import android.view.Window
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.jhkj.videoplayer.R
+import com.jhkj.videoplayer.utils.KeyboardUtils
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import java.util.Calendar
@@ -35,6 +37,21 @@ open class BaseActivity : AppCompatActivity() {
         val timeInMillis = Calendar.getInstance().timeInMillis
         v.setTag(v.id, timeInMillis)
         return timeInMillis - beforeTimeMiles < 800
+    }
+
+
+    fun onBackClick(v:View){
+        if(v.id == com.jhkj.gl_player.R.id.back_btn){
+            finishAfterTransition()
+        }
+    }
+
+    protected fun showToast(str: String){
+        Toast.makeText(this,str, Toast.LENGTH_SHORT).show()
+    }
+
+    protected fun hideKeyboard(){
+        KeyboardUtils.hideSoftInput(this)
     }
 
     class UIHandler(activity: BaseActivity) : Handler(Looper.getMainLooper()) {

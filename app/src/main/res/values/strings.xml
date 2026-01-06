@@ -10,4 +10,17 @@
     <string name="edit_connection">Edit Connection</string>
     <string name="ali_connection">Ali Cloud Disk</string>
     <string name="baidu_connection">Baidu NetDisk</string>
+
+    <string name="display_name">Display Name:</string>
+    <string name="host_full_path">Host URL:</string>
+    <string name="protocol">Protocol:</string>
+    <string name="domain_or_ip">Domain/IP:</string>
+    <string name="path">Path:</string>
+    <string name="port">Port:</string>
+    <string name="connect_as">Connect As</string>
+    <string name="username">Username:</string>
+    <string name="password">Password:</string>
+
+    <string name="save_success">Saved!</string>
+    <string name="save_failed">Save Failed!</string>
 </resources>
