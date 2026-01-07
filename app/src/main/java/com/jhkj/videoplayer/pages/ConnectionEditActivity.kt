@@ -125,6 +125,7 @@ class ConnectionEditActivity : BaseActivity() {
 //                        dialog?.show()
                         if(isSuc){
                             showToast(Res.string(R.string.save_success))
+                            finishAfterTransition()
                         }else{
                             showToast(Res.string(R.string.save_failed))
                         }

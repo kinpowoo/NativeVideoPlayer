@@ -10,6 +10,7 @@
     <string name="edit_connection">Edit Connection</string>
     <string name="ali_connection">Ali Cloud Disk</string>
     <string name="baidu_connection">Baidu NetDisk</string>
+    <string name="my_files">My Files</string>
 
     <string name="display_name">Display Name:</string>
     <string name="host_full_path">Host URL:</string>
@@ -23,4 +24,14 @@
 
     <string name="save_success">Saved!</string>
     <string name="save_failed">Save Failed!</string>
+
+    <string name="permission_not_grant">Storage access permission not grant.</string>
+    <string name="please_give_storage_permission">Please Grant Storage Access Permission.</string>
+    <string name="go_to_settings">Go to Settings</string>
+    <string name="enable_storage_alert">Go to settings to enable access storage permission.</string>
+    <string name="grant">Grant</string>
+    <string name="agree">Agree</string>
+    <string name="refuse">Refuse</string>
+    <string name="confirm">Confirm</string>
+    <string name="cancel">Cancel</string>
 </resources>

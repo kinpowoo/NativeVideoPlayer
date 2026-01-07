@@ -17,7 +17,7 @@
     <color name="input_bg_darker">#F0F0F0</color>
     <color name="week_unselect_bg">#EEEEEE</color>
     <color name="cancel_or_select_bg">#F5F5F5</color>
-
+    <color name="popup_bg">#FFFFFF</color>
     <color name="transparent">#00FFFFFF</color>
 
     <!-- 字体色系 -->
@@ -27,6 +27,8 @@
     <color name="text_primary_light">#666666</color>
     <color name="text_btn">#FFFFFF</color>
     <color name="text_btn_disable">#B3FFFFFF</color>
+    <color name="text_red">#FF6262</color>
+    <color name="text_red_alpha20">#B3FF6262</color>
     <color name="text_small_caption">#3C3B39</color>
     <color name="text_popup">#666666</color>
     <color name="text_menu">#80666666</color>

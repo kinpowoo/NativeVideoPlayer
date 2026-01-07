@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_view"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent"
+    tools:viewBindingIgnore="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/rc24_popup_bg"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.494"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0">
+
+        <TextView
+            android:id="@+id/title"
+            style="@style/Body1_Style"
+            android:textColor="@color/text_primary"
+            android:layout_width="match_parent"
+            app:layout_goneMarginStart="10dp"
+            app:layout_goneMarginEnd="10dp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:layout_marginStart="30dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="30dp"
+            app:layout_constraintBottom_toTopOf="@+id/message_tv"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/message_tv"
+            style="@style/Body2_Style"
+            android:textColor="@color/text_popup"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="30dp"
+            android:layout_marginTop="20dp"
+            app:layout_goneMarginTop="30dp"
+            android:layout_marginBottom="20dp"
+            app:layout_goneMarginBottom="30dp"
+            android:layout_marginEnd="30dp"
+            android:breakStrategy="simple"
+            android:lineSpacingMultiplier="0.6"
+            android:maxHeight="300dp"
+            android:minHeight="@dimen/sp_16"
+            android:lineSpacingExtra="@dimen/sp_10"
+            android:scrollbars="vertical"
+            android:fadeScrollbars="false"
+            app:layout_constraintBottom_toTopOf="@+id/positive_btn"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/title" />
+
+        <TextView
+            android:id="@+id/close_btn"
+            style="@style/WrapContentButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="20dp"
+            android:background="@drawable/rc22_input_color_bg"
+            android:gravity="center"
+            android:maxLines="2"
+            android:textColor="@color/text_negative_btn"
+            app:layout_constraintBottom_toBottomOf="@+id/positive_btn"
+            app:layout_constraintEnd_toStartOf="@+id/positive_btn"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/positive_btn" />
+
+        <TextView
+            android:id="@+id/positive_btn"
+            style="@style/WrapContentButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/rc22_primary_color_bg"
+            android:gravity="center"
+            android:maxLines="3"
+            android:textColor="@color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/close_btn"
+            app:layout_constraintTop_toBottomOf="@id/message_tv" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

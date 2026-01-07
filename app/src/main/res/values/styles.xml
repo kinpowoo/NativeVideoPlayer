@@ -43,4 +43,38 @@
         <item name="android:windowNoTitle">true</item>
     </style>
 
+    <style name="ScaleInAnimDialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowFrame">@null</item>
+        <item name="android:backgroundDimAmount">0.5</item>
+        <item name="android:windowAnimationStyle">@style/ScaleCenter</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:layout_width">match_parent</item>
+    </style>
+
+
+    <!-- 弹窗标题，正文-强调 -->
+    <style name="Body1_Style" parent="TextAppearance.AppCompat">
+        <item name="android:textSize">@dimen/sp_16</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="fontFamily">sans-serif-medium</item>
+    </style>
+    <!-- 正文常规/列表主标题/输入框/弹窗正文 -->
+    <style name="Body2_Style" parent="TextAppearance.AppCompat">
+        <item name="android:textSize">@dimen/sp_16</item>
+        <item name="android:textColor">@color/text_popup</item>
+        <item name="fontFamily">sans-serif</item>
+    </style>
+
+    <!-- 自适应文字高度button -->
+    <style name="WrapContentButtonStyle">
+        <item name="android:textSize">@dimen/sp_14</item>
+        <item name="fontFamily">sans-serif</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+    </style>
 </resources>
