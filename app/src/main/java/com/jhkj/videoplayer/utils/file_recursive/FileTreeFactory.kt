@@ -1,5 +1,6 @@
 package com.jhkj.videoplayer.utils.file_recursive
 
+import android.text.TextUtils
 import java.io.File
 
 class FileTreeFactory(rootPath:String): FileProviderProtocol{
@@ -12,14 +13,19 @@ class FileTreeFactory(rootPath:String): FileProviderProtocol{
     private fun convertFile(file:File): FileItem{
         val isDir = file.isDirectory
         val name = file.name
-        val subname = file.nameWithoutExtension
+        var subname = file.nameWithoutExtension
+        val isHidden =(TextUtils.isEmpty(subname) && name.startsWith("."))
+        if(TextUtils.isEmpty(subname)){
+            subname = name
+        }
         val suffix = name.split(subname).lastOrNull() ?: ""
         val mimeType = suffix.removePrefix(".")
         val fileItem = FileItem(isDir,file.name,
             subname,mimeType,
             file.lastModified(),file.lastModified(),
             file.length(),0,"",file.absolutePath,
-            file.parent ?: "",file.canWrite(),file.canRead())
+            file.parent ?: "",isHidden,
+            file.canWrite(), file.canRead())
         return fileItem
     }
 
@@ -29,13 +35,15 @@ class FileTreeFactory(rootPath:String): FileProviderProtocol{
 
     override fun listFiles(parent: FileItem): List<FileItem> {
         if(parent.isDirectory){
-            val file = File(rootFile.path)
+            val file = File(parent.path)
             val childFiles = file.listFiles()
             if(childFiles != null && !childFiles.isEmpty()){
                 val fileItems = mutableListOf<FileItem>()
                 childFiles.forEach { item ->
                     val fileItem = convertFile(item)
-                    fileItems.add(fileItem)
+                    if(!fileItem.isHide) {
+                        fileItems.add(fileItem)
+                    }
                 }
                 return fileItems
             }

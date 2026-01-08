@@ -21,8 +21,10 @@ import com.jhkj.videoplayer.adapter.FileInfoListAdapter
 import com.jhkj.videoplayer.compose_pages.ComDialog
 import com.jhkj.videoplayer.databinding.HomeFragmentLayoutBinding
 import com.jhkj.videoplayer.utils.PermissionTool
+import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import com.jhkj.videoplayer.utils.file_recursive.FileTreeFactory
 import com.jhkj.videoplayer.viewmodels.HomeFragmentVm
+import java.util.Stack
 
 class HomeFragment : VisibilityFragment() {
     private var binding: HomeFragmentLayoutBinding? = null
@@ -32,6 +34,8 @@ class HomeFragment : VisibilityFragment() {
 
     private var factory: FileTreeFactory? = null
     private var fileAdapter: FileInfoListAdapter? = null
+
+    private var filePathStack = Stack<FileItem>()
 
 
     override fun onCreateView(
@@ -56,10 +60,15 @@ class HomeFragment : VisibilityFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         fileAdapter = FileInfoListAdapter{ item,idx ->
-
+            openFile(item)
+            checkBackIcon()
         }
         binding?.fileList?.layoutManager = GridLayoutManager(requireContext(),3)
         binding?.fileList?.adapter = fileAdapter
+        binding?.appIcon?.setOnClickListener {
+            popupDir()
+            checkBackIcon()
+        }
 
         binding?.goToSettings?.setOnClickListener {
             if (isDoubleClick(it)) return@setOnClickListener
@@ -83,18 +92,6 @@ class HomeFragment : VisibilityFragment() {
         }
     }
 
-
-    fun goToSettingsAlert() {
-        ComDialog.Builder(requireContext())
-            .setMessage(R.string.enable_storage_alert)
-            .setPositiveButton(R.string.go_to_settings) {
-                openStoragePermissionSettings()
-            }
-            .setNegativeButton(R.string.cancel) {
-            }
-            .create().show()
-    }
-
     override fun onResume() {
         super.onResume()
         isPermissionGranted = checkStoragePermission()
@@ -115,6 +112,74 @@ class HomeFragment : VisibilityFragment() {
             }
             binding?.storageAlertBox?.visibility = View.VISIBLE
         }
+    }
+
+    //创建目录结构
+    fun createFactoryAndList(){
+        val externFile = Environment.getExternalStorageDirectory()
+        factory = FileTreeFactory(externFile.absolutePath)
+        val childFiles = factory?.listRoot()
+        childFiles?.let {
+            fileAdapter?.addFiles(it)
+        }
+    }
+
+    fun isRoot(): Boolean{
+        return filePathStack.isEmpty()
+    }
+
+    fun checkBackIcon(){
+        if(isRoot()){
+            binding?.appIcon?.setImageResource(R.drawable.native_play_logo)
+            binding?.title?.setText(R.string.my_files)
+        }else{
+            binding?.appIcon?.setImageResource(R.drawable.ic_back_btn)
+            val peek = filePathStack.peek()
+            binding?.title?.text = peek.fileName
+        }
+    }
+
+    fun openFile(fileInfo: FileItem){
+        if(fileInfo.isDirectory){
+            filePathStack.push(fileInfo)
+            val childFiles = factory?.listFiles(fileInfo)
+            childFiles?.let {
+                fileAdapter?.addFiles(it)
+            }
+        }else{
+            //打开文件
+        }
+    }
+
+    fun popupDir(){
+        if(filePathStack.isNotEmpty()) {
+            filePathStack.pop()
+        }
+        if(!isRoot()) {
+            val peekFile = filePathStack.peek()
+            val childFiles = factory?.listFiles(peekFile)
+            childFiles?.let {
+                fileAdapter?.addFiles(it)
+            }
+        }else{
+            val childFiles = factory?.listRoot()
+            childFiles?.let {
+                fileAdapter?.addFiles(it)
+            }
+        }
+    }
+
+
+
+    fun goToSettingsAlert() {
+        ComDialog.Builder(requireContext())
+            .setMessage(R.string.enable_storage_alert)
+            .setPositiveButton(R.string.go_to_settings) {
+                openStoragePermissionSettings()
+            }
+            .setNegativeButton(R.string.cancel) {
+            }
+            .create().show()
     }
 
     // 检查存储权限
@@ -200,16 +265,6 @@ class HomeFragment : VisibilityFragment() {
                     binding?.goToSettings?.setText(R.string.go_to_settings)
                 }
             }
-        }
-    }
-
-
-    fun createFactoryAndList(){
-        val externFile = Environment.getExternalStorageDirectory()
-        factory = FileTreeFactory(externFile.absolutePath)
-        val childFiles = factory?.listRoot()
-        childFiles?.let {
-            fileAdapter?.addFiles(it)
         }
     }
 

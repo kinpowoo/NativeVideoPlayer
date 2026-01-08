@@ -12,6 +12,7 @@ data class FileItem(
     var thumbnail:String,
     var path:String,
     var parentPath:String,
+    var isHide: Boolean,
     var isWritable: Boolean,
     var isReadable: Boolean
 )
