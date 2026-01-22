@@ -38,6 +38,7 @@ class ConnectionEditActivity : BaseActivity() {
         }else{
             connDto = intent.getSerializableExtra("connInfo") as? ConnInfo
         }
+        val connType = intent.getIntExtra("connType",ConnType.WEBDAV.ordinal)
         if(connDto == null){
             binding?.title?.text = Res.string(R.string.add_connection)
         }else{
@@ -45,8 +46,8 @@ class ConnectionEditActivity : BaseActivity() {
         }
         if(connDto == null) {
             connDto = ConnInfo(0,"",
-                "","","http",80,"","",
-                ConnType.WEBDAV.ordinal)
+                "","","HTTP",80,"","",
+                connType)
         }
 
         loadConnInfo()

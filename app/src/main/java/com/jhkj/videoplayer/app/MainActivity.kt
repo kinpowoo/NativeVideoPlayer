@@ -3,6 +3,7 @@ package com.jhkj.videoplayer.app
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentTransaction
 import com.google.android.material.navigation.NavigationBarView
@@ -40,6 +41,28 @@ class MainActivity : BaseActivity() {
         binding?.bottomNavigationView?.setOnItemReselectedListener(
             mOnNavigationItemReselectedListener
         )
+
+        val callback = object : OnBackPressedCallback(
+            true // default to enabled
+        ) {
+            override fun handleOnBackPressed() {
+                if(currentId == 0){
+                    homeFragment?.onBackPressClick()
+                }
+            }
+        }
+        onBackPressedDispatcher.addCallback(
+            this, // LifecycleOwner
+            callback
+        )
+
+    }
+
+    override fun onBackPressed() {
+        super.onBackPressed()
+        if(currentId == 0){
+            homeFragment?.onBackPressClick()
+        }
     }
 
 

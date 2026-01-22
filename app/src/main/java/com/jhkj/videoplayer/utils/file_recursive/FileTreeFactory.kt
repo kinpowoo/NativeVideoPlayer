@@ -25,7 +25,7 @@ class FileTreeFactory(rootPath:String): FileProviderProtocol{
             file.lastModified(),file.lastModified(),
             file.length(),0,"",file.absolutePath,
             file.parent ?: "",isHidden,
-            file.canWrite(), file.canRead())
+            file.canWrite(), file.canRead(),"","")
         return fileItem
     }
 

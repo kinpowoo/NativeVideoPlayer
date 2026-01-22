@@ -22,12 +22,13 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import com.jhkj.gl_player.PlayerFragment
-import com.jhkj.gl_player.model.WebdavResource
+import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.gl_player.util.DensityUtil
 import com.jhkj.gl_player.util.ImmersiveStatusBarUtils
 import com.jhkj.videoplayer.R
 import com.jhkj.videoplayer.utils.ContentUriUtil
 import com.jhkj.videoplayer.databinding.VideoPlayerLayoutBinding
+import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -60,6 +61,10 @@ class VideoPlayerActivity : AppCompatActivity(){
         supportActionBar?.hide()
 //        actionBar?.hide()
 //        supportActionBar?.hide()
+
+        binding.backBtn.setOnClickListener {
+            finish()
+        }
 
         binding.pickVideo.setOnClickListener{
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
@@ -129,17 +134,22 @@ class VideoPlayerActivity : AppCompatActivity(){
             val path = ContentUriUtil.getPath(this, uri)
 //            playerFragment?.loadUri(uri)
             playerFragment?.loadUrl(path)
+            binding.pickVideo.visibility = View.GONE
 //            Toast.makeText(this, "获得path:$path", Toast.LENGTH_SHORT).show()
         } else {
 //            Toast.makeText(this, "外部传入的uri为null", Toast.LENGTH_SHORT).show()
-            //处理webdav数据
-            val connInfo: WebdavResource? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getSerializableExtra("webdav", WebdavResource::class.java)
+            val fileInfo: FileItem? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getSerializableExtra("fileItem", FileItem::class.java)
             }else{
-                intent.getSerializableExtra("webdav") as? WebdavResource
+                intent.getSerializableExtra("fileItem") as? FileItem
             }
-            if(connInfo != null){
-                playerFragment?.loadWebdav(connInfo)
+            if(fileInfo != null){
+                val webResFile = WebResourceFile(fileInfo.path,
+                    fileInfo.credentialUser ?: "",fileInfo.credentialPass ?: "")
+                lifecycleScope.launch(Dispatchers.IO) {
+                    playerFragment?.loadWebResource( webResFile)
+                }
+                binding.pickVideo.visibility = View.GONE
             }
         }
     }

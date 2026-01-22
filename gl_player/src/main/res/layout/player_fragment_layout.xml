@@ -52,35 +52,6 @@
 
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/buffering_box"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:background="@drawable/overlay_view"
-        android:visibility="gone"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
-
-        <ProgressBar
-            android:id="@+id/buffering_bar"
-            android:indeterminateBehavior="repeat"
-            android:indeterminateDrawable="@anim/working_rotate"
-            android:indeterminateDuration="1000"
-            android:indeterminateOnly="true"
-            android:interpolator="@android:anim/linear_interpolator"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            android:layout_margin="20dp"
-            android:layout_width="40dp"
-            android:layout_height="40dp"/>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-
-    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/brightness_box"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -144,32 +115,32 @@
             app:layout_constraintEnd_toStartOf="@+id/forward_30"
             app:layout_constraintTop_toTopOf="parent"
             android:visibility="visible"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="5dp"
             android:layout_marginEnd="15dp"
             android:src="@drawable/outline_replay_30_24"
-            android:layout_width="28dp"
-            android:layout_height="28dp"/>
+            android:layout_width="24dp"
+            android:layout_height="24dp"/>
 
         <ImageView
             android:id="@+id/forward_30"
             app:layout_constraintEnd_toStartOf="@+id/speed_icon"
             app:layout_constraintTop_toTopOf="parent"
             android:visibility="visible"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="5dp"
             android:layout_marginEnd="15dp"
             android:src="@drawable/outline_forward_30_24"
-            android:layout_width="28dp"
-            android:layout_height="28dp"/>
+            android:layout_width="24dp"
+            android:layout_height="24dp"/>
         <ImageView
             android:id="@+id/speed_icon"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             android:visibility="visible"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="5dp"
             android:layout_marginEnd="15dp"
             android:src="@drawable/outline_speed_24"
-            android:layout_width="28dp"
-            android:layout_height="28dp"/>
+            android:layout_width="24dp"
+            android:layout_height="24dp"/>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/toolbar_box"
@@ -186,6 +157,21 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <ProgressBar
+            android:id="@+id/loading_view"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:visibility="gone"
+            android:indeterminateBehavior="repeat"
+            android:indeterminateDrawable="@anim/working_rotate"
+            android:indeterminateDuration="1000"
+            android:indeterminateOnly="true"
+            android:interpolator="@android:anim/linear_interpolator"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <SeekBar
             android:id="@+id/seek_bar"
@@ -208,19 +194,21 @@
             android:id="@+id/start_btn"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            android:layout_margin="10dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
             android:src="@drawable/baseline_play_arrow_24"
-            android:layout_width="32dp"
-            android:layout_height="32dp"/>
+            android:layout_width="28dp"
+            android:layout_height="28dp"/>
         <ImageView
             android:id="@+id/voice_btn"
             app:layout_constraintStart_toEndOf="@+id/start_btn"
             app:layout_constraintBottom_toBottomOf="parent"
             android:layout_marginStart="30dp"
-            android:layout_marginBottom="10dp"
+            android:layout_marginBottom="5dp"
             android:src="@drawable/baseline_volume_up_24"
-            android:layout_width="32dp"
-            android:layout_height="32dp"/>
+            android:layout_width="28dp"
+            android:layout_height="28dp"/>
 
         <TextView
             android:id="@+id/time"
@@ -240,10 +228,10 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             android:layout_marginEnd="15dp"
-            android:layout_marginBottom="10dp"
+            android:layout_marginBottom="5dp"
             android:src="@drawable/baseline_fullscreen_24"
-            android:layout_width="32dp"
-            android:layout_height="32dp"/>
+            android:layout_width="28dp"
+            android:layout_height="28dp"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

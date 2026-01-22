@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.jhkj.videoplayer.R
 import com.jhkj.videoplayer.adapter.FileInfoListAdapter
 import com.jhkj.videoplayer.compose_pages.ComDialog
+import com.jhkj.videoplayer.compose_pages.models.FileType
 import com.jhkj.videoplayer.databinding.HomeFragmentLayoutBinding
 import com.jhkj.videoplayer.utils.PermissionTool
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
@@ -92,6 +93,7 @@ class HomeFragment : VisibilityFragment() {
         }
     }
 
+
     override fun onResume() {
         super.onResume()
         isPermissionGranted = checkStoragePermission()
@@ -148,6 +150,7 @@ class HomeFragment : VisibilityFragment() {
             }
         }else{
             //打开文件
+            FileType.doLocalFileOpenAction(requireContext(), fileInfo)
         }
     }
 
@@ -170,6 +173,10 @@ class HomeFragment : VisibilityFragment() {
     }
 
 
+    override fun onBackPressClick() {
+        popupDir()
+        checkBackIcon()
+    }
 
     fun goToSettingsAlert() {
         ComDialog.Builder(requireContext())

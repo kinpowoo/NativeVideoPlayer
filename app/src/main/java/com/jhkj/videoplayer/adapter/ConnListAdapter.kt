@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.text.TextUtils
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
@@ -17,7 +18,7 @@ import com.jhkj.videoplayer.utils.Res
 import java.util.Locale
 
 class ConnListAdapter(private val connSelect:(ConnInfo, Int)->Unit,
-                    private val moreClick:(ConnInfo?, Int)->Unit): RecyclerView.Adapter<ConnListAdapter.ConnTypeHolder>(){
+                    private val moreClick:(ConnInfo?, Int, View)->Unit): RecyclerView.Adapter<ConnListAdapter.ConnTypeHolder>(){
     private val connList = mutableListOf<ConnInfo>()
     private lateinit var context: Context
     private var selectIndex = -1
@@ -63,6 +64,9 @@ class ConnListAdapter(private val connSelect:(ConnInfo, Int)->Unit,
         notifyItemRangeInserted(0,connList.size)
     }
 
+    fun getItem(pos:Int): ConnInfo?{
+        return connList.getOrNull(pos)
+    }
 
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ConnTypeHolder {
@@ -86,7 +90,7 @@ class ConnListAdapter(private val connSelect:(ConnInfo, Int)->Unit,
             val pos = holder.bindingAdapterPosition
             if (pos < connList.size && pos >= 0) {
                 val item = connList[pos]
-                moreClick.invoke(item,pos)
+                moreClick.invoke(item,pos,holder.moreIv)
             }
         }
         onBindViewHolder(holder, position)

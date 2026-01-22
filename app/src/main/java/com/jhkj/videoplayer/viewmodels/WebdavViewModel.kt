@@ -1,10 +1,12 @@
 package com.jhkj.videoplayer.viewmodels
 
+import android.text.TextUtils
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jhkj.videoplayer.compose_pages.models.ConnInfo
+import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import com.thegrizzlylabs.sardineandroid.DavResource
 import com.thegrizzlylabs.sardineandroid.Sardine
 import com.thegrizzlylabs.sardineandroid.impl.OkHttpSardine
@@ -15,6 +17,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.serialization.gson.gson
 import kotlinx.coroutines.launch
+import java.io.File
 import java.io.IOException
 
 
@@ -28,9 +31,9 @@ sealed interface PostState {
 
 data class Post(val userId:Int,val id:Int,val title:String,val body:String)
 
-class WebdavViewModel : ViewModel() {
+
+class WebdavViewModel : ViewModel(), RemoteProvider{
     private val _state = MutableLiveData<PostState>(PostState.Idle)
-    val state: LiveData<PostState> = _state
 
     private val ktorClient = HttpClient(Android) {
         install(ContentNegotiation) {
@@ -59,7 +62,7 @@ class WebdavViewModel : ViewModel() {
 
     private val client: Sardine = OkHttpSardine()
 
-    fun checkUrl(conn:ConnInfo):Boolean{
+    override fun checkUrl(conn:ConnInfo):Boolean{
         client.setCredentials(conn.username,conn.pass)
         var url = getFullUrl(conn)
         url += "/"
@@ -75,17 +78,62 @@ class WebdavViewModel : ViewModel() {
         }
     }
 
-    fun listPath(conn:ConnInfo,path:String):List<DavResource>?{
+   override fun listFiles(conn:ConnInfo,subpath:String):List<FileItem>?{
         client.setCredentials(conn.username,conn.pass)
         val baseUrl = getFullUrl(conn)
-        val url = baseUrl + path
+        val url = baseUrl + subpath
         try {
             val files:List<DavResource>? = client.list(url)
-            return files
+            val items = mutableListOf<FileItem>()
+            files?.forEach{
+                if(it.path != subpath) {
+                    val fileItem = convertFile(baseUrl, it, conn)
+                    items.add(fileItem)
+                }
+            }
+            return items
         } catch (e: IOException) {
             // 连接已断开
             return null
         }
+    }
+
+    override fun deleteFile(conn: ConnInfo, subpath: String): Boolean {
+        client.setCredentials(conn.username,conn.pass)
+        val baseUrl = getFullUrl(conn)
+        val url = baseUrl + subpath
+        try {
+            client.delete(url)
+            return true
+        } catch (e: IOException) {
+            // 连接已断开
+            return false
+        }
+    }
+
+    private fun convertFile(baseURL:String,file:DavResource,conn: ConnInfo): FileItem{
+        val isDir = file.isDirectory
+        val name = file.name
+        val lastDotIdx = name.lastIndexOf(".")
+        var subname = if(lastDotIdx > 0) {
+            file.name.substring(0, lastDotIdx)
+        }else{
+            ""
+        }
+        val isHidden = (TextUtils.isEmpty(subname) && name.startsWith("."))
+        if(TextUtils.isEmpty(subname)){
+            subname = name
+        }
+        val suffix = name.split(subname).lastOrNull() ?: ""
+        val mimeType = suffix.removePrefix(".")
+        val fileItem = FileItem(isDir,file.name,
+            subname,file.contentType,
+            file.creation.time,file.modified.time,
+            file.contentLength,0,"",
+            baseURL+file.path,
+            "",isHidden,
+            true, true,conn.username,conn.pass)
+        return fileItem
     }
 
 

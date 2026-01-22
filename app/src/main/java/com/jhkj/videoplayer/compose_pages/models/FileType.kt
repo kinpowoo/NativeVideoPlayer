@@ -2,9 +2,9 @@ package com.jhkj.videoplayer.compose_pages.models
 
 import android.content.Context
 import android.content.Intent
-import com.jhkj.gl_player.model.WebdavResource
 import com.jhkj.videoplayer.R
 import com.jhkj.videoplayer.player.VideoPlayerActivity
+import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import com.thegrizzlylabs.sardineandroid.DavResource
 
 
@@ -37,16 +37,46 @@ object FileType{
 //        }
     }
 
-    fun doFileOpenAction(context: Context,item:DavResource,connDto: ConnInfo){
+    fun doWebDavFileOpenAction(context: Context,item:DavResource,connDto: ConnInfo){
         val name:String = item.name
         val resPath = item.path
         if(isMovie(name)){
+//            val intent = Intent(context, VideoPlayerActivity::class.java)
+//            val info = WebdavResource(connDto.displayName,
+//                connDto.domain,resPath,
+//                connDto.protocol,connDto.port,
+//                connDto.username,connDto.pass)
+//            intent.putExtra("webdav",info)
+//            context.startActivity(intent)
+        }else if(isMusic(name)){
+
+        }else if(isPhoto(name)){
+
+        }else if(isText(name)){
+
+        }else if(isBook(name)){
+
+        }else if(isGif(name)){
+
+        }else if(isWord(name)){
+
+        }else if(isExcel(name)){
+
+        }else if(isPdf(name)){
+
+        }else if(isZip(name)) {
+        }
+        else{
+
+        }
+    }
+
+    fun doLocalFileOpenAction(context: Context,file: FileItem){
+        val name:String = file.fileName
+        val resPath = file.path
+        if(isMovie(name)){
             val intent = Intent(context, VideoPlayerActivity::class.java)
-            val info = WebdavResource(connDto.displayName,
-                connDto.domain,resPath,
-                connDto.protocol,connDto.port,
-                connDto.username,connDto.pass)
-            intent.putExtra("webdav",info)
+            intent.putExtra("fileItem",file)
             context.startActivity(intent)
         }else if(isMusic(name)){
 

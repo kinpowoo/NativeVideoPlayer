@@ -26,7 +26,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.jhkj.gl_player.fragment.PlayerBaseFragment
-import com.jhkj.gl_player.model.WebdavResource
+import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.gl_player.util.DensityUtil
 import com.jhkj.gl_player.util.SpeedDialog
 import com.jhkj.gl_player.util.StatusBarTool
@@ -47,15 +47,13 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var forwardIcon:ImageView? = null
     private var targetTime:TextView? = null
 
-    //缓冲
-    private var bufferingBox:ConstraintLayout? = null
-
     //亮度和音量
     private var brightnessBox:ConstraintLayout? = null
     private var brightnessIcon:ImageView? = null
     private var brightnessText:TextView? = null
     private var brightnessSlider:SeekBar? = null
 
+    private var loadingView: ProgressBar? = null
     private var seekBar:SeekBar? = null
     private var backBtn:ImageView? = null
     private var playBtn:ImageView? = null
@@ -123,12 +121,12 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     }
 
     private fun initView(view:View){
+        loadingView = view.findViewById(R.id.loading_view)
         glPlayer = view.findViewById(R.id.gl_player)
         controlPanel = view.findViewById(R.id.control_bar)
         toolbarBox = view.findViewById(R.id.toolbar_box)
         forwardBox = view.findViewById(R.id.forward_box)
         forwardIcon = view.findViewById(R.id.direction_icon)
-        bufferingBox = view.findViewById(R.id.buffering_box)
         targetTime = view.findViewById(R.id.target_time)
         brightnessBox = view.findViewById(R.id.brightness_box)
         brightnessIcon = view.findViewById(R.id.brightness_icon)
@@ -216,24 +214,34 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         })
         glPlayer?.setBufferingListener(object:BufferingListener{
             override fun bufferingProgress(progress: Int) {
-                seekBar?.secondaryProgress = progress
+                activity?.runOnUiThread {
+                    seekBar?.secondaryProgress = progress
+                }
             }
 
             override fun bufferingStart() {
-                bufferingBox?.visibility = View.VISIBLE
+                activity?.runOnUiThread {
+                    loadingView?.visibility = View.VISIBLE
+                }
             }
 
             override fun bufferingStop() {
-                bufferingBox?.visibility = View.GONE
+                activity?.runOnUiThread {
+                    loadingView?.visibility = View.GONE
+                }
             }
         })
         glPlayer?.setVolumeStateListener(object:VolumeStateListener{
             override fun volumeMuted() {
-                muteBtn?.setImageResource(R.drawable.baseline_volume_off_24)
+                activity?.runOnUiThread {
+                    muteBtn?.setImageResource(R.drawable.baseline_volume_off_24)
+                }
             }
 
             override fun volumeResumed() {
-                muteBtn?.setImageResource(R.drawable.baseline_volume_up_24)
+                activity?.runOnUiThread {
+                    muteBtn?.setImageResource(R.drawable.baseline_volume_up_24)
+                }
             }
         })
 
@@ -345,8 +353,8 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         glPlayer?.loadUri(uri)
     }
 
-    fun loadWebdav(conn: WebdavResource){
-        glPlayer?.loadWebdav(conn)
+    fun loadWebResource(conn: WebResourceFile){
+        glPlayer?.loadWebResource(conn)
     }
 
 

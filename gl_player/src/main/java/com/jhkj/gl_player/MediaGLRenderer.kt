@@ -10,13 +10,13 @@ import android.media.PlaybackParams
 import android.net.Uri
 import android.opengl.*
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.text.TextUtils
 import android.util.Base64
 import android.util.Log
 import android.view.Surface
-import android.widget.FrameLayout
-import android.widget.RelativeLayout
-import androidx.annotation.RequiresApi
-import com.jhkj.gl_player.model.WebdavResource
+import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.gl_player.util.GLDataUtil
 import com.jhkj.gl_player.util.ResReadUtils
 import com.jhkj.gl_player.util.ShaderUtils
@@ -24,7 +24,6 @@ import java.io.IOException
 import java.lang.Exception
 import java.lang.IllegalArgumentException
 import java.nio.FloatBuffer
-import java.nio.IntBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.max
@@ -47,7 +46,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
     private var mProgram = 0
     private var playUrl:String? = null
     private var playUri:Uri? = null
-    private var webdavResource: WebdavResource? = null
+    private var webdavResource: WebResourceFile? = null
 
     private var vDuration:Int = 0  //视频的总时长（毫秒）
     private var vProgressTime:Int = 0  //视频的当前位置（毫秒）
@@ -63,8 +62,9 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
     private var playStateListener:PlayStateListener? = null
     private var volumeStateListener:VolumeStateListener? = null
     private var isVideoRotated = false
+    private var isReleased = false
     private var isFullScreen = false
-
+    private var mHandler = Handler(Looper.getMainLooper())
 
     private val mPosCoordinate = floatArrayOf(
         -1f, -1f,0f,
@@ -206,27 +206,18 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         startPlay()
     }
 
-    fun loadWebdav(conn: WebdavResource){
+    fun loadWebResource(conn: WebResourceFile){
         playUrl = null
         playUri = null
         webdavResource = conn
-        val uri = getFullUrl(conn)
          // Base64 编码认证信息
-        val credentials = conn.username + ":" + conn.pass
+        val credentials = conn.user + ":" + conn.pass
         val auth = "Basic " + Base64.encodeToString(credentials.toByteArray(),
             Base64.NO_WRAP)
         val headers =  mapOf("Authorization" to auth)
-        val rotation = getVideoRotation(uri,headers)
+        val rotation = getVideoRotation(conn.path,headers)
         isVideoRotated = (rotation == 90)
         startPlay()
-    }
-
-    private fun getFullUrl(conn:WebdavResource):String{
-        val protocol = conn.protocol.lowercase()
-        val host = conn.domain
-        val port = conn.port
-        val path = conn.path
-        return "$protocol://$host:$port$path"
     }
 
     fun getVideoRotation(filePath: String): Int {
@@ -283,9 +274,9 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
                 mPlayer.setDataSource(mContext!!,playUri!!)
             }
             webdavResource?.let { conn ->
-                val url = getFullUrl(conn).toUri()
+                val url = conn.path.toUri()
                 // Base64 编码认证信息
-                val credentials = conn.username + ":" + conn.pass
+                val credentials = conn.user + ":" + conn.pass
                 val auth = "Basic " + Base64.encodeToString(credentials.toByteArray(),
                     Base64.NO_WRAP)
                 val headers =  mapOf("Authorization" to auth)
@@ -345,6 +336,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
             mPlayer.release()
             isMediaPlaying = false
             isMediaPrepared = false
+            isReleased = true
         }catch (e:Exception){
             Log.e(TAG, "MediaPlayer pause: $e")
         }
@@ -414,24 +406,48 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
 
 
     fun seekTo(percent:Float){
-        if(!isMediaPrepared)return
-        try {
-            bufferingListener?.bufferingStart()
-            isBuffering = true
-            val duration = mPlayer.duration  //获取时间的毫秒数
-            val pos = (duration*percent).toInt()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                mPlayer.seekTo(pos.toLong(),MediaPlayer.SEEK_CLOSEST)
-            }else{
-                mPlayer.seekTo(pos)
+        if(isReleased)return
+        if(!isMediaPrepared){
+            startPlay()
+            mHandler.postDelayed({
+                try {
+                    bufferingListener?.bufferingStart()
+                    isBuffering = true
+                    val duration = mPlayer.duration  //获取时间的毫秒数
+                    val pos = (duration * percent).toInt()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        mPlayer.seekTo(pos.toLong(), MediaPlayer.SEEK_CLOSEST)
+                    } else {
+                        mPlayer.seekTo(pos)
+                    }
+                    resumePlay()
+                } catch (e: IllegalStateException) {
+                    isBuffering = false
+                    e.printStackTrace()
+                } catch (e2: IllegalArgumentException) {
+                    isBuffering = false
+                    e2.printStackTrace()
+                }
+            },500)
+        }else {
+            try {
+                bufferingListener?.bufferingStart()
+                isBuffering = true
+                val duration = mPlayer.duration  //获取时间的毫秒数
+                val pos = (duration * percent).toInt()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mPlayer.seekTo(pos.toLong(), MediaPlayer.SEEK_CLOSEST)
+                } else {
+                    mPlayer.seekTo(pos)
+                }
+                resumePlay()
+            } catch (e: IllegalStateException) {
+                isBuffering = false
+                e.printStackTrace()
+            } catch (e2: IllegalArgumentException) {
+                isBuffering = false
+                e2.printStackTrace()
             }
-            resumePlay()
-        }catch (e:IllegalStateException){
-            isBuffering = false
-            e.printStackTrace()
-        }catch (e2:IllegalArgumentException){
-            isBuffering = false
-            e2.printStackTrace()
         }
     }
 

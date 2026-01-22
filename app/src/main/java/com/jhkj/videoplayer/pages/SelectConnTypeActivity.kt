@@ -1,5 +1,6 @@
 package com.jhkj.videoplayer.pages
 
+import android.content.Intent
 import android.os.Bundle
 import android.transition.Slide
 import android.view.Gravity
@@ -66,7 +67,9 @@ class SelectConnTypeActivity : BaseActivity() {
         }
 
         adapter = ConnTypeAdapter{ item,idx ->
-
+            val tent = Intent(this, ConnectionEditActivity::class.java)
+            tent.putExtra("connType",item.identity.ordinal)
+            startActivity(tent)
         }
         binding?.connTypeList?.layoutManager = GridLayoutManager(this,3)
         binding?.connTypeList?.adapter = adapter

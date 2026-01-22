@@ -48,6 +48,13 @@
             tools:ignore="LockedOrientationActivity"/>
 
         <activity
+            android:name=".pages.RemoteFilesActivity"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|screenSize|layoutDirection|locale|uiMode|colorMode"
+            android:windowSoftInputMode="adjustPan|stateHidden"
+            tools:ignore="LockedOrientationActivity"/>
+
+        <activity
             android:name=".player.VideoPlayerActivity"
             android:theme="@style/AppTheme"
             android:configChanges="orientation|screenSize|layoutDirection|locale|uiMode|colorMode"

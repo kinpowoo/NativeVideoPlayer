@@ -7,7 +7,7 @@ import android.graphics.SurfaceTexture.OnFrameAvailableListener
 import android.net.Uri
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
-import com.jhkj.gl_player.model.WebdavResource
+import com.jhkj.gl_player.model.WebResourceFile
 
 class PlayerGLSurface : GLSurfaceView, OnFrameAvailableListener {
     private var render: MediaGLRenderer? = null
@@ -86,8 +86,8 @@ class PlayerGLSurface : GLSurfaceView, OnFrameAvailableListener {
         render?.loadUri(uri)
     }
 
-    fun loadWebdav(conn: WebdavResource){
-        render?.loadWebdav(conn)
+    fun loadWebResource(conn: WebResourceFile){
+        render?.loadWebResource(conn)
     }
 
     fun pausePlay(){
