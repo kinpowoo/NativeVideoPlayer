@@ -41,7 +41,7 @@ open class BaseActivity : AppCompatActivity() {
 
 
     fun onBackClick(v:View){
-        if(v.id == com.jhkj.gl_player.R.id.back_btn){
+        if(v.id == R.id.back_btn){
             finishAfterTransition()
         }
     }

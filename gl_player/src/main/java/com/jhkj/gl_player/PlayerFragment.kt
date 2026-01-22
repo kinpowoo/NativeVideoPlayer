@@ -40,9 +40,9 @@ import kotlin.math.abs
 class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var glPlayer:PlayerGLSurface? = null  //播放控件
     private var controlPanel:ConstraintLayout? = null  //控制面板
-    private var toolbarBox:ConstraintLayout? = null
 
     //快进快退
+    private var backBtnHor:ImageView? = null
     private var forwardBox:ConstraintLayout? = null
     private var forwardIcon:ImageView? = null
     private var targetTime:TextView? = null
@@ -53,9 +53,9 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var brightnessText:TextView? = null
     private var brightnessSlider:SeekBar? = null
 
+
     private var loadingView: ProgressBar? = null
     private var seekBar:SeekBar? = null
-    private var backBtn:ImageView? = null
     private var playBtn:ImageView? = null
     private var muteBtn:ImageView? = null
     private var scaleBtn:ImageView? = null
@@ -124,7 +124,8 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         loadingView = view.findViewById(R.id.loading_view)
         glPlayer = view.findViewById(R.id.gl_player)
         controlPanel = view.findViewById(R.id.control_bar)
-        toolbarBox = view.findViewById(R.id.toolbar_box)
+
+        backBtnHor = view.findViewById(R.id.back_btn_hor)
         forwardBox = view.findViewById(R.id.forward_box)
         forwardIcon = view.findViewById(R.id.direction_icon)
         targetTime = view.findViewById(R.id.target_time)
@@ -141,7 +142,6 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
 
 
         seekBar = view.findViewById(R.id.seek_bar)
-        backBtn = view.findViewById(R.id.back_btn)
         playBtn = view.findViewById(R.id.start_btn)
         muteBtn = view.findViewById(R.id.voice_btn)
         scaleBtn = view.findViewById(R.id.scale_btn)
@@ -169,6 +169,8 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                 activity?.runOnUiThread {
                     visibleControlPanel()
                     playBtn?.setImageResource(R.drawable.baseline_replay_24)
+                    seekBar?.progress = 100
+                    progressBar?.progress = 100
                 }
             }
             override fun playPaused() {
@@ -274,15 +276,14 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
             if(isFullScreen){
                 isFullScreen = false
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED  //切换竖屏
-                toolbarBox?.visibility = View.GONE
             }
             else{
                 isFullScreen = true
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE  //切换横屏
-                toolbarBox?.visibility = View.VISIBLE
             }
         }
-        backBtn?.setOnClickListener {
+
+        backBtnHor?.setOnClickListener {
             if(isDoubleClick(it))return@setOnClickListener
             if(isFullScreen){
                 isFullScreen = false
@@ -290,10 +291,10 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
 
 //                StatusBarTool.exitFullScreen(requireActivity(),originStatusBarColor)
 //                adjustToolbar()
-                toolbarBox?.visibility = View.GONE
+            }else {
+                activity?.finish()
             }
         }
-
         speedBtn?.setOnClickListener {
             if(isDoubleClick(it))return@setOnClickListener
             showSpeedDialog()
@@ -363,6 +364,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         lastShowControlPanelTime = SystemClock.elapsedRealtime()
         controlPanel?.visibility = View.VISIBLE
         progressBar?.visibility = View.GONE
+
     }
 
     private fun dismissControlPanel(){

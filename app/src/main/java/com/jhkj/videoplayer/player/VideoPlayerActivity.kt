@@ -62,18 +62,15 @@ class VideoPlayerActivity : AppCompatActivity(){
 //        actionBar?.hide()
 //        supportActionBar?.hide()
 
-        binding.backBtn.setOnClickListener {
-            finish()
-        }
-
         binding.pickVideo.setOnClickListener{
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
-                if(!hasPermissions(this, mediaPermissions[0]) ||
-                    !hasPermissions(this, mediaPermissions[1])){
-                    readMediaPermissionLauncher.launch(mediaPermissions)
-                }else{
-                    openAlbum()
-                }
+//                if(!hasPermissions(this, mediaPermissions[0]) ||
+//                    !hasPermissions(this, mediaPermissions[1])){
+//                    readMediaPermissionLauncher.launch(mediaPermissions)
+//                }else{
+//                    openAlbum()
+//                }
+                openAlbum()
             } else if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
                 requestStoragePermission = manageStoragePermission
                 if(!hasPermissions(this, requestStoragePermission)){
@@ -163,14 +160,14 @@ class VideoPlayerActivity : AppCompatActivity(){
                     openAlbum()
                 }else{
                     if (!shouldShowRequestPermissionRationale(requestStoragePermission)) {
-                        Snackbar.make(binding.topBar, "前往设置打开存储权限", Snackbar.LENGTH_SHORT).show()
+                        Snackbar.make(binding.pickVideo, "前往设置打开存储权限", Snackbar.LENGTH_SHORT).show()
                         // 用户勾选了“不再询问”，跳转到设置页面
                         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                             data = Uri.fromParts("package", packageName, null)
                         }
                         startActivity(intent)
                     } else {
-                        Snackbar.make(binding.topBar, "请同意访问存储权限", Snackbar.LENGTH_SHORT).show()
+                        Snackbar.make(binding.pickVideo, "请同意访问存储权限", Snackbar.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -185,14 +182,14 @@ class VideoPlayerActivity : AppCompatActivity(){
                     openAlbum()
                 }else{
                     if (!shouldShowRequestPermissionRationale(requestStoragePermission)) {
-                        Snackbar.make(binding.topBar, "前往设置打开存储权限", Snackbar.LENGTH_SHORT).show()
+                        Snackbar.make(binding.pickVideo, "前往设置打开存储权限", Snackbar.LENGTH_SHORT).show()
                         // 用户勾选了“不再询问”，跳转到设置页面
                         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                             data = Uri.fromParts("package", packageName, null)
                         }
                         startActivity(intent)
                     } else {
-                        Snackbar.make(binding.topBar, "请同意访问存储权限", Snackbar.LENGTH_SHORT).show()
+                        Snackbar.make(binding.pickVideo, "请同意访问存储权限", Snackbar.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -241,7 +238,7 @@ class VideoPlayerActivity : AppCompatActivity(){
                 if(uri != null) {
                     playerFragment?.loadUri(uri)
                 }else{
-                    Snackbar.make(binding.topBar, "没有选择任何视频文件", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.pickVideo, "没有选择任何视频文件", Snackbar.LENGTH_SHORT).show()
                 }
             }else {
                 val clipData = it.data?.clipData
@@ -287,9 +284,9 @@ class VideoPlayerActivity : AppCompatActivity(){
                     it.height = ViewGroup.LayoutParams.MATCH_PARENT
                     binding.contentContainer.layoutParams = it
                 }
-                binding.topBar.visibility = View.GONE
+//                binding.pickVideo.visibility = View.GONE
             } else {
-                binding.topBar.visibility = View.VISIBLE
+//                binding.pickVideo.visibility = View.VISIBLE
                 val params = binding.contentContainer.layoutParams
                 params?.let {
                     it.width = ViewGroup.LayoutParams.MATCH_PARENT
