@@ -38,4 +38,6 @@
     <string name="edit">Edit</string>
     <string name="delete">Delete</string>
     <string name="connection_not_accessible">Connection not accessible</string>
+
+    <string name="ble">Blue Tool</string>
 </resources>

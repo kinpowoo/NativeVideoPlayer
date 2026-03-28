@@ -18,3 +18,4 @@ rootProject.name = "VideoPlayer"
 include ':app'
 include ':gl_player'
 include ':webdav'
+include ':ble_manager'

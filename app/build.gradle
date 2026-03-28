@@ -107,4 +107,8 @@ dependencies {
 
     implementation project(path: ':gl_player')
     implementation project(path: ':webdav')
+
+
+    //AndroidX 版本
+    implementation 'com.github.jenly1314:zxing-lite:3.4.1'
 }

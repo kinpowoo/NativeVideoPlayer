@@ -5,11 +5,13 @@ plugins {
 
 android {
     namespace 'com.jhkj.gl_player'
-    compileSdk 35
+    compileSdk {
+        version = release(36)
+    }
 
     defaultConfig {
         minSdk 21
-        targetSdk 35
+        targetSdk 36
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -22,8 +24,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
 
     buildFeatures {
