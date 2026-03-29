@@ -1,24 +1,47 @@
 package com.sintech.wifi_direct.activity
 
+import android.Manifest
+import android.app.Activity
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.os.IBinder
+import android.provider.MediaStore
+import android.provider.Settings
+import android.text.method.ScrollingMovementMethod
+import android.view.View
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import com.sintech.wifi_direct.ImmersiveStatusBarUtils
-import com.sintech.wifi_direct.client.WiFiDirectClient
 import com.sintech.wifi_direct.databinding.WifiClientLayoutBinding
 import com.sintech.wifi_direct.protocol.ClientCallback
 import com.sintech.wifi_direct.protocol.FileReceiveCallback
+import com.sintech.wifi_direct.service.WiFiDirectClientService
+import com.sintech.wifi_direct.util.FileUtils
+import com.sintech.wifi_direct.util.UriToPathUtil
 import java.io.File
-import java.io.IOException
 import java.lang.ref.WeakReference
-import java.nio.file.Files
+import java.net.InetSocketAddress
 
 
-class WifiClientActivity : AppCompatActivity(),ClientCallback,FileReceiveCallback{
+class WifiClientActivity : AppCompatActivity(),ServiceConnection,ClientCallback,FileReceiveCallback{
+    private val STORAGE_PERMISSION_REQUEST_CODE: Int = 100
     private var binding: WifiClientLayoutBinding? = null
     private val sb = StringBuilder()
-    private var client:WiFiDirectClient? = null
+    private var service: WiFiDirectClientService? = null
+    private var isClientRunning = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,29 +55,134 @@ class WifiClientActivity : AppCompatActivity(),ClientCallback,FileReceiveCallbac
             finish()
         }
 
+        //绑定服务
+        bindService(
+            Intent(this, WiFiDirectClientService::class.java),
+            this,
+            BIND_AUTO_CREATE
+        )
+        startWiFiDirectService()
 
-        connectToServer()
-
-
+        binding?.msgArea?.movementMethod = ScrollingMovementMethod.getInstance()
         binding?.sendBtn?.setOnClickListener {
             val msg = binding?.inputEt?.text?.toString() ?: ""
             if(isConnected()) {
-                client?.sendString(msg)
+                service?.client?.sendString(msg)
             }
             binding?.inputEt?.setText("")
         }
+
+        binding?.pickFileBtn?.setOnClickListener {
+            if(checkStoragePermission()) {
+                binding?.fileType?.visibility = View.VISIBLE
+            }else{
+              requestStoragePermission()
+            }
+        }
+        binding?.imageType?.setOnClickListener {
+            binding?.fileType?.visibility = View.GONE
+            initPickImg()
+        }
+        binding?.videoType?.setOnClickListener {
+            binding?.fileType?.visibility = View.GONE
+            initPickImg()
+        }
+        binding?.fileType?.setOnClickListener {
+            openDocument()
+            binding?.fileType?.visibility = View.GONE
+        }
     }
 
+    /**
+     * 启动WiFi Direct服务
+     */
+    private fun startWiFiDirectService() {
+        // 启动前台服务
+        WiFiDirectClientService.startService(this)
+        // 调度Job（Android 5.0+）
+//        WiFiDirectJobService.scheduleJob(this)
+        // 更新UI
+        isClientRunning = true
+    }
+
+
+    private fun initPickImg(){
+        if(checkStoragePermission()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                openAlbum13()
+            } else {
+                openAlbum()
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun openAlbum13(){
+        val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
+        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX,1)
+        photoOrVideoSelectIntent.launch(intent)
+    }
+
+    private fun openDocument(){
+        //大于9.0系统，采用Documents方式获取uri
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+            intent.addCategory(Intent.CATEGORY_OPENABLE)
+            intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+            intent.type = "*/*"
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
+            photoOrVideoSelectIntent.launch(intent)
+        }else{
+            val intent = Intent(Intent.ACTION_PICK,
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
+            photoOrVideoSelectIntent.launch(intent)
+        }
+    }
+
+    private fun openAlbum(){
+        val intent = Intent(Intent.ACTION_PICK)
+        intent.type = "*/*"
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
+        // 允许多选（可选）
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
+        photoOrVideoSelectIntent.launch(intent)
+//        startActivityForResult(Intent.createChooser(intent, "选择媒体"), 1001)
+    }
+
+    private val photoOrVideoSelectIntent: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { it2 ->
+            if (it2.resultCode == Activity.RESULT_OK) {
+                val photoUri = it2.data?.data
+                photoUri?.let { uri ->
+                    // 获取持久化权限
+                    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        try {
+                            contentResolver.takePersistableUriPermission(
+                                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                        }catch (e:SecurityException){
+                            e.printStackTrace()
+                        }
+                    }
+                    val filePath = UriToPathUtil.getPathFromUri(this@WifiClientActivity,uri)
+                    filePath?.let { path ->
+                        val newFile = File(path)
+                        if(newFile.exists()) {
+                            Thread{
+                                service?.client?.sendFile(newFile)
+                            }.start()
+                        }
+                    }
+                }
+            }
+        }
+
+
     fun connectToServer(){
-        Thread{
-            client?.disconnect()
-            client = null
-            client = WiFiDirectClient(
-                "192.168.3.24", 8888,
-                WeakReference(this), WeakReference(this)
-            )
-            client?.connect()
-        }.start()
+        service?.connectToServer(this, InetSocketAddress(
+            "192.168.3.24",8888
+        ), WeakReference(this),WeakReference(this))
     }
 
     override fun onConnected() {
@@ -63,12 +191,12 @@ class WifiClientActivity : AppCompatActivity(),ClientCallback,FileReceiveCallbac
     }
 
     override fun onDisconnected(reason: String?) {
-        println("Disconnected: " + reason)
+        println("Disconnected: $reason")
         appendStrAndShow("disconnected :$reason")
     }
 
     override fun onMessageReceived(message: String?) {
-        println("Message received: " + message)
+        println("Message received: $message")
         appendStrAndShow("msg receive:$message")
     }
 
@@ -81,34 +209,102 @@ class WifiClientActivity : AppCompatActivity(),ClientCallback,FileReceiveCallbac
     }
 
     override fun onFileAckReceived(ack: String?) {
-        println("File ack: " + ack)
-        appendStrAndShow("ack receive:$ack")
+        println("File ack: $ack")
     }
     override fun onFileReceiveStarted(fileId: String, fileName: String?, fileSize: Long) {
-        println(
-            "File receive started: " + fileName +
-                    " (" + fileSize + " bytes)"
-        )
+        if(!checkStoragePermission()){
+            runOnUiThread {
+                AlertDialog.Builder(this)
+                    .setTitle("新文件接收提醒")
+                    .setMessage("接收文件需授予存储访问权限")
+                    .setPositiveButton("授予"){ which,dialog ->
+                        requestStoragePermission()
+                    }
+                    .setNegativeButton("拒绝"){ which,dialog ->
+                        Toast.makeText(this, "需要存储权限才能传输文件", Toast.LENGTH_SHORT).show()
+                    }
+                    .create().show()
+            }
+        }
     }
 
     override fun onFileChunkReceived(fileId: String, chunkIndex: Int, chunkSize: Int) {
         // 文件分片接收处理
     }
 
-    override fun onFileReceived(fileId: String, fileName: String?, fileData: ByteArray) {
+    override fun onFileReceived(fileId: String, fileName: String?, filePath: String) {
         // 保存文件
-        try {
-            val file = File("received_$fileName")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Files.write(file.toPath(), fileData)
+        if(checkStoragePermission()) {
+            val downloadDir = FileUtils.getDownloadDir(this)
+            if (downloadDir != null && fileName != null) {
+                val destFile = File(downloadDir, fileName)
+                FileUtils.moveFile(filePath, destFile)
             }
-        } catch (e: IOException) {
-            e.printStackTrace()
         }
     }
 
     override fun onFileTransferError(error: String?) {
         System.err.println("File transfer error: " + error)
+    }
+
+    fun checkStoragePermission(): Boolean{
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ 检测 MANAGE_EXTERNAL_STORAGE
+            return Environment.isExternalStorageManager()
+        } else {
+            return ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    fun requestStoragePermission(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ 打开所有文件访问权限页
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                intent.data = ("package:$packageName").toUri()
+                startActivity(intent)
+            } catch (e:Exception) {
+                // 回退到应用详情页
+                openAppDetailsSettings()
+            }
+        }else{
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                STORAGE_PERMISSION_REQUEST_CODE
+            )
+        }
+    }
+
+    private fun openAppDetailsSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        val uri = Uri.fromParts("package",packageName, null)
+        intent.data = uri
+        startActivity(intent)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == STORAGE_PERMISSION_REQUEST_CODE) {
+            var allGranted = true
+            for (result in grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false
+                    break
+                }
+            }
+            if (!allGranted){
+                Toast.makeText(this, "需要存储权限才能传输文件", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
 
@@ -125,13 +321,38 @@ class WifiClientActivity : AppCompatActivity(),ClientCallback,FileReceiveCallbac
         }
     }
     private fun isConnected(): Boolean{
-        toast("未连接到服务器")
-        return client?.isConnected ?: false
+//        toast("未连接到服务器")
+        return  service?.client?.isConnected ?: false
+    }
+
+
+    // 服务回调
+    override fun onServiceConnected(name: ComponentName?, binder: IBinder) {
+        service = (binder as WiFiDirectClientService.SerialBinder).service
+        service?.setWeakRef(WeakReference(this@WifiClientActivity))
+        connectToServer()
+    }
+
+    override fun onServiceDisconnected(name: ComponentName?) {
+        service = null
+    }
+
+
+    /**
+     * 停止WiFi Direct服务
+     */
+    private fun stopWiFiDirectService() {
+        // 停止前台服务
+        WiFiDirectClientService.stopService(this)
+        // 取消Job
+//        WiFiDirectJobService.cancelJob(this)
+        // 更新UI
+        isClientRunning = false
     }
 
     override fun onDestroy() {
-        client?.disconnect("exit page!")
-        client = null
+        unbindService(this)
+        stopWiFiDirectService()
         super.onDestroy()
     }
 }

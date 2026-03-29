@@ -73,7 +73,7 @@ class BleGattServerActivity : AppCompatActivity(){
             }
         }
 
-        public override fun onCharacteristicReadRequest(
+        override fun onCharacteristicReadRequest(
             device: BluetoothDevice,
             requestId: Int,
             offset: Int,

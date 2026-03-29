@@ -6,6 +6,6 @@ package com.sintech.wifi_direct.protocol;
 public interface FileReceiveCallback {
     void onFileReceiveStarted(String fileId, String fileName, long fileSize);
     void onFileChunkReceived(String fileId, int chunkIndex, int chunkSize);
-    void onFileReceived(String fileId, String fileName, byte[] fileData);
+    void onFileReceived(String fileId, String fileName, String filePath);
     void onFileTransferError(String error);
 }

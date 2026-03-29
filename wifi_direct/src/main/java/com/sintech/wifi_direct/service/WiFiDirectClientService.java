@@ -1,53 +1,65 @@
 package com.sintech.wifi_direct.service;
 
-import android.app.*;
-import android.content.*;
+import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.wifi.WifiManager;
-import android.os.*;
+import android.os.Binder;
+import android.os.Build;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.os.PowerManager;
 import android.util.Log;
-
-import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
-
 import com.sintech.wifi_direct.R;
-import com.sintech.wifi_direct.activity.WifiServerActivity;
-import com.sintech.wifi_direct.protocol.FileTransferCallback;
-import com.sintech.wifi_direct.protocol.ServerCallback;
-import com.sintech.wifi_direct.server.WiFiDirectServer;
-
+import com.sintech.wifi_direct.activity.WifiClientActivity;
+import com.sintech.wifi_direct.client.WiFiDirectClient;
+import com.sintech.wifi_direct.protocol.ClientCallback;
+import com.sintech.wifi_direct.protocol.FileReceiveCallback;
 import org.jspecify.annotations.Nullable;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.net.InetSocketAddress;
 
 
 /**
  * WiFi Direct 前台服务
  * 保证服务端在后台持续运行
  */
-public class WiFiDirectForegroundService extends Service implements ServerCallback,FileTransferCallback {
-    
-    private static final String TAG = "WiFiDirectService";
+public class WiFiDirectClientService extends Service implements ClientCallback, FileReceiveCallback {
+
+    private static final String TAG = "WiFiDirectClient";
     private static final int NOTIFICATION_ID = 1001;
     private static final String CHANNEL_ID = "WiFiDirectChannel";
     private static final String CHANNEL_NAME = "WiFi Direct Service";
-    
+
     // 服务器实例
-    private WiFiDirectServer wiFiDirectServer;
-    private boolean isServerRunning = false;
+    private WiFiDirectClient wiFiDirectClient;
+    private boolean isClientRunning = false;
 
     private final IBinder binder;
 
-    private WeakReference<WifiServerActivity> ref;
-    
+    private WeakReference<WifiClientActivity> ref;
+
     // 唤醒锁
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
 
-    public WiFiDirectForegroundService() {
+    public WiFiDirectClientService() {
         binder = new SerialBinder();
     }
+    public final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    public void setWeakRef(WeakReference<WifiServerActivity> actRef){
+    public void setWeakRef(WeakReference<WifiClientActivity> actRef){
         this.ref = actRef;
     }
     
@@ -90,15 +102,12 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "WiFiDirectForegroundService started");
         
-        // 启动WiFi Direct服务器
-        startWiFiDirectServer();
-        
         // 返回START_STICKY，系统会自动重启服务
         return START_STICKY;
     }
 
-    public @Nullable WiFiDirectServer getServer(){
-        return wiFiDirectServer;
+    public @Nullable WiFiDirectClient getClient(){
+        return wiFiDirectClient;
     }
     
     /**
@@ -126,7 +135,7 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
      * 创建前台服务通知
      */
     private Notification createNotification() {
-        Intent notificationIntent = new Intent(this, WifiServerActivity.class);
+        Intent notificationIntent = new Intent(this, WifiClientActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(
             this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE
         );
@@ -146,117 +155,114 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
     }
 
 
-    // ======== Server Callback Start ===================================================
+    // ======== Client Callback Start ===================================================
     @Override
-    public void onClientConnected(@NonNull String clientId) {
-        Log.d(TAG, "Client connected: " + clientId);
-        updateNotification("设备已连接: " + clientId);
+    public void onConnected(){
+        updateNotification("已连接到服务器");
         if(ref.get() != null){
-            ref.get().onClientConnected(clientId);
+            ref.get().onConnected();
         }
     }
-
     @Override
-    public void onClientDisconnected(@NonNull String clientId, String reason) {
-        updateNotification("等待设备连接...");
+    public void onDisconnected(String reason){
+        updateNotification("等待连接到服务器...");
         if(ref.get() != null){
-            ref.get().onClientDisconnected(clientId,reason);
+            ref.get().onDisconnected(reason);
         }
     }
-
     @Override
-    public void onMessageReceived(@NonNull String clientId, String message) {
+    public void onMessageReceived(String message){
         if(ref.get() != null){
-            ref.get().onMessageReceived(clientId,message);
+            ref.get().onMessageReceived(message);
         }
     }
-
     @Override
-    public void onHeartbeatReceived(@NonNull String clientId) {
+    public void onHeartbeatReceived(){
         // 心跳处理
         if(ref.get() != null){
-            ref.get().onHeartbeatReceived(clientId);
+            ref.get().onHeartbeatReceived();
         }
     }
-
     @Override
-    public void onHeartbeatAckReceived(@NonNull String clientId) {
+    public void onHeartbeatAckReceived(){
         // 心跳确认处理
         if(ref.get() != null){
-            ref.get().onHeartbeatAckReceived(clientId);
+            ref.get().onHeartbeatAckReceived();
         }
     }
-
     @Override
-    public void onFileAckReceived(@NonNull String clientId, String ack) {
-        Log.d(TAG, "File ack from " + clientId + ": " + ack);
+    public void onFileAckReceived(String ack){
         if(ref.get() != null){
-            ref.get().onFileAckReceived(clientId,ack);
+            ref.get().onFileAckReceived(ack);
         }
     }
-    // ======== Server Callback End ===================================================
+    // ======== Client Callback End ===================================================
 
 
     // ======== File Transfer Callback Start ===================================================
     @Override
-    public void onFileTransferStarted(String clientId, String fileId,
-                                      String fileName, long fileSize) {
-        Log.d(TAG, "File transfer started: " + fileName);
+    public void onFileReceiveStarted(String fileId, String fileName, long fileSize){
         updateNotification("正在接收文件: " + fileName);
         if(ref.get() != null){
-            ref.get().onFileTransferStarted(clientId,fileId,fileName,fileSize);
+            ref.get().onFileReceiveStarted(fileId,fileName,fileSize);
         }
     }
-
     @Override
-    public void onFileTransferCompleted(String clientId, String fileId,
-                                        String fileName, String filePath) {
-        updateNotification("文件接收完成: " + fileName);
-        if(ref.get() != null){
-            ref.get().onFileTransferCompleted(clientId,fileId,fileName,filePath);
-        }
-    }
-
-    @Override
-    public void onFileChunkReceived(String clientId, String fileId,
-                                    int chunkIndex, int chunkSize) {
+    public void onFileChunkReceived(String fileId, int chunkIndex, int chunkSize){
         // 分片接收处理
         if(ref.get() != null){
-            ref.get().onFileChunkReceived(clientId,fileId,chunkIndex,chunkSize);
+            ref.get().onFileChunkReceived(fileId,chunkIndex,chunkSize);
         }
     }
-
     @Override
-    public void onFileTransferError(String clientId, String fileId, String error) {
+    public void onFileReceived(String fileId, String fileName, String filePath){
+        updateNotification("文件接收完成: " + fileName);
         if(ref.get() != null){
-            ref.get().onFileTransferError(clientId,fileId,error);
+            ref.get().onFileReceived(fileId,fileName,filePath);
         }
     }
-
+    @Override
+    public void onFileTransferError(String error){
+        if(ref.get() != null){
+            ref.get().onFileTransferError(error);
+        }
+    }
     // ======== File Transfer Callback End ===================================================
     
     /**
      * 启动WiFi Direct服务器
      */
-    private void startWiFiDirectServer() {
-        if (isServerRunning) {
-            return;
+    public void connectToServer(Context context, InetSocketAddress addresses,
+                                 WeakReference<ClientCallback> callback, WeakReference<FileReceiveCallback> fileCallback) {
+        if (isClientRunning) {
+            stopWiFiDirectClient();
         }
-        
-        try {
-            String cacheDir = this.getCacheDir().getAbsolutePath();
-            // 启动服务器（使用8888端口）
-            wiFiDirectServer = new WiFiDirectServer(8888, cacheDir, this,this);
-            wiFiDirectServer.start();
-            
-            isServerRunning = true;
-            Log.d(TAG, "WiFi Direct server started on port 8888");
-            updateNotification("等待设备连接...");
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to start WiFi Direct server", e);
-            updateNotification("服务器启动失败");
-        }
+        String cacheDir = context.getCacheDir().getAbsolutePath();
+        new Thread(){
+            @Override
+            public void run() {
+                super.run();
+                if(wiFiDirectClient != null) {
+                    wiFiDirectClient.disconnect();
+                }
+                wiFiDirectClient = null;
+                wiFiDirectClient = new WiFiDirectClient(addresses,cacheDir, callback, fileCallback);
+                try {
+                    wiFiDirectClient.connect();
+                } catch (IOException e) {
+//                    throw new RuntimeException(e);
+                    final String error = e.getLocalizedMessage();
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            onDisconnected(error);
+                            updateNotification("服务器启动失败");
+                        }
+                    });
+
+                }
+            }
+        }.start();
     }
     
     /**
@@ -366,12 +372,12 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
     /**
      * 停止WiFi Direct服务器
      */
-    private void stopWiFiDirectServer() {
-        if (wiFiDirectServer != null) {
+    private void stopWiFiDirectClient() {
+        if (wiFiDirectClient != null) {
             try {
-                wiFiDirectServer.shutdown();
-                wiFiDirectServer = null;
-                isServerRunning = false;
+                wiFiDirectClient.disconnect();
+                wiFiDirectClient = null;
+                isClientRunning = false;
                 Log.d(TAG, "WiFi Direct server stopped");
             } catch (Exception e) {
                 Log.e(TAG, "Error stopping WiFi Direct server", e);
@@ -384,8 +390,7 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
         Log.d(TAG, "WiFiDirectForegroundService destroying");
         
         // 停止服务器
-        stopWiFiDirectServer();
-        
+        stopWiFiDirectClient();
         // 释放唤醒锁
         releaseLocks();
         
@@ -408,14 +413,14 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
     }
 
     public class SerialBinder extends Binder {
-        public WiFiDirectForegroundService getService() { return WiFiDirectForegroundService.this; }
+        public WiFiDirectClientService getService() { return WiFiDirectClientService.this; }
     }
 
     /**
      * 启动前台服务
      */
     public static void startService(Context context) {
-        Intent serviceIntent = new Intent(context, WiFiDirectForegroundService.class);
+        Intent serviceIntent = new Intent(context, WiFiDirectClientService.class);
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(serviceIntent);
@@ -428,7 +433,7 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
      * 停止前台服务
      */
     public static void stopService(Context context) {
-        Intent serviceIntent = new Intent(context, WiFiDirectForegroundService.class);
+        Intent serviceIntent = new Intent(context, WiFiDirectClientService.class);
         context.stopService(serviceIntent);
     }
 }

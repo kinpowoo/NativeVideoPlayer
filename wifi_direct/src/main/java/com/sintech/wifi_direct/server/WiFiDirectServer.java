@@ -1,5 +1,7 @@
 package com.sintech.wifi_direct.server;
 
+import android.content.Context;
+import android.os.Environment;
 import android.util.Log;
 
 import com.sintech.wifi_direct.protocol.FileTransferCallback;
@@ -66,11 +68,16 @@ public class WiFiDirectServer {
     // 统计信息
     private final AtomicInteger totalConnections = new AtomicInteger(0);
     private final AtomicInteger totalMessages = new AtomicInteger(0);
+
+    private final String cacheDirPath;
+//    private File downloadFile;
     
-    public WiFiDirectServer(int port, ServerCallback callback, 
-                           FileTransferCallback fileCallback) throws IOException {
+    public WiFiDirectServer(int port, String cacheDir, ServerCallback callback,
+                            FileTransferCallback fileCallback) throws IOException {
         this.callback = callback;
         this.fileCallback = fileCallback;
+        this.cacheDirPath = cacheDir;
+//        downloadFile = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
         initialize(port);
     }
     
@@ -142,8 +149,6 @@ public class WiFiDirectServer {
                                 } else if (key.isWritable()) {
                                     handleWrite(key);
                                 }
-                            }else{
-                                key.cancel();
                             }
                         } catch (CancelledKeyException e) {
                             // 连接被取消
@@ -337,7 +342,6 @@ public class WiFiDirectServer {
             case WiFiDirectProtocol.TYPE_FILE_DATA:
                 handleFileData(session, message.data);
                 break;
-                
             case WiFiDirectProtocol.TYPE_FILE_ACK:
                 handleFileAck(session, message.data);
                 break;
@@ -392,11 +396,12 @@ public class WiFiDirectServer {
             FileMeta meta = WiFiDirectProtocol.decodeFileMeta(data);
             
             FileTransfer transfer = new FileTransfer(
-                meta.fileId,
-                session.clientId,
-                meta.fileName,
-                meta.fileSize,
-                meta.totalChunks
+                    meta.fileId,
+                    session.clientId,
+                    meta.fileName,
+                    meta.fileSize,
+                    meta.totalChunks,
+                    cacheDirPath
             );
             
             fileTransfers.put(meta.fileId, transfer);
@@ -428,16 +433,23 @@ public class WiFiDirectServer {
         try {
             FileChunk chunk = WiFiDirectProtocol.decodeFileChunk(data);
             String fileId = chunk.fileId;
-            
-            FileTransfer transfer = fileTransfers.get(fileId);
+            final FileTransfer transfer = fileTransfers.get(fileId);
             if (transfer == null) {
                 sendFileError(session, "File transfer not found: " + fileId);
                 return;
             }
-            
+
             // 保存数据块
-            transfer.addChunk(chunk.chunkIndex, chunk.chunkData);
-            
+            workerPool.submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        transfer.addChunk(chunk.chunkIndex, chunk.chunkData);
+                    } catch (IOException e) {
+                        sendFileError(session, "write file chunk data to local temp file failed");
+                    }
+                }
+            });
             // 发送确认
             sendFileAck(session, fileId, chunk.chunkIndex + 1, "CHUNK");
             
@@ -453,10 +465,10 @@ public class WiFiDirectServer {
             }
             
             // 检查是否完成
-            if (chunk.isLast && transfer.isComplete()) {
+//            if (chunk.isLast && transfer.isComplete()) {
+            if (chunk.isLast) {
                 completeFileTransfer(session, transfer);
             }
-            
         } catch (IOException e) {
             e.printStackTrace();
             sendFileError(session, "Invalid file chunk data");
@@ -468,15 +480,14 @@ public class WiFiDirectServer {
      */
     private void completeFileTransfer(ClientSession session, FileTransfer transfer) {
         try {
-            byte[] fileData = transfer.assembleFile();
+            String filePath = transfer.getFilePath();
             
             if (fileCallback != null) {
                 workerPool.submit(() -> 
                     fileCallback.onFileTransferCompleted(
                         session.clientId,
                         transfer.fileId,
-                        transfer.fileName,
-                        fileData
+                        transfer.fileName, filePath
                     )
                 );
             }
@@ -486,7 +497,6 @@ public class WiFiDirectServer {
             
             // 清理
             fileTransfers.remove(transfer.fileId);
-            
         } catch (IOException e) {
             e.printStackTrace();
             sendFileError(session, "Failed to assemble file: " + e.getMessage());
@@ -623,24 +633,24 @@ public class WiFiDirectServer {
             fileId, file.getName(), fileSize, totalChunks
         );
         sendToClient(clientId, meta);
-        
+
         // 分片发送文件数据
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
             byte[] chunkBuffer = new byte[WiFiDirectProtocol.MAX_CHUNK_SIZE];
             int chunkIndex = 0;
             int bytesRead;
-            
+
             while ((bytesRead = raf.read(chunkBuffer)) != -1) {
                 byte[] chunkData = Arrays.copyOf(chunkBuffer, bytesRead);
                 boolean isLast = (raf.getFilePointer() >= fileSize);
-                
+
                 ByteBuffer chunk = WiFiDirectProtocol.encodeFileData(
                     fileId, chunkIndex, chunkData, isLast
                 );
-                
+
                 sendToClient(clientId, chunk);
                 chunkIndex++;
-                
+
                 // 控制发送速率
                 Thread.sleep(1);
             }
@@ -849,7 +859,7 @@ public class WiFiDirectServer {
     /**
      * 客户端会话类
      */
-    private class ClientSession {
+    private static class ClientSession {
         final String clientId;
         final SocketChannel channel;
         final SelectionKey selectionKey;
@@ -953,28 +963,59 @@ public class WiFiDirectServer {
     /**
      * 文件传输类
      */
-    private class FileTransfer {
+    private static class FileTransfer {
         final String fileId;
         final String clientId;
         final String fileName;
         final long fileSize;
         final int totalChunks;
-        final Map<Integer, byte[]> chunks = new ConcurrentHashMap<>();
+//        final Map<Integer, byte[]> chunks = new ConcurrentHashMap<>();
+        final String parentDir;
+        private File writeFile;
         final AtomicInteger receivedChunks = new AtomicInteger(0);
         final long startTime = System.currentTimeMillis();
         
         FileTransfer(String fileId, String clientId, String fileName, 
-                    long fileSize, int totalChunks) {
+                    long fileSize, int totalChunks,String parentDirPath) {
             this.fileId = fileId;
             this.clientId = clientId;
             this.fileName = fileName;
             this.fileSize = fileSize;
+            this.parentDir = parentDirPath;
+            this.writeFile = new File(parentDirPath,fileName);
             this.totalChunks = totalChunks;
         }
         
-        void addChunk(int chunkIndex, byte[] chunkData) {
-            if (chunks.putIfAbsent(chunkIndex, chunkData) == null) {
-                receivedChunks.incrementAndGet();
+        void addChunk(int chunkIndex, byte[] chunkData) throws IOException{
+            if(writeFile != null){
+                if(!writeFile.exists()) {
+                    try {
+                        if (writeFile != null) {
+//                            writeFile.mkdir();
+                            writeFile.createNewFile();
+                        }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                RandomAccessFile raf = null;
+                try{
+                    raf = new RandomAccessFile(writeFile,"rw");
+                    int offset = chunkIndex*WiFiDirectProtocol.MAX_CHUNK_SIZE;
+                    long pointer = (long)offset * chunkIndex;
+                    if(pointer < raf.length()){
+                        raf.seek(pointer);
+                    }
+                    raf.write(chunkData,0,chunkData.length);
+                    receivedChunks.incrementAndGet();
+                }catch (IOException e) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }finally {
+                    if(raf != null){
+                        raf.close();
+                    }
+                }
             }
         }
         
@@ -982,19 +1023,19 @@ public class WiFiDirectServer {
             return receivedChunks.get() >= totalChunks;
         }
         
-        byte[] assembleFile() throws IOException {
+        String getFilePath() throws IOException {
             if (!isComplete()) {
                 throw new IOException("File not complete");
             }
-            
-            ByteArrayOutputStream baos = new ByteArrayOutputStream((int) fileSize);
-            for (int i = 0; i < totalChunks; i++) {
-                byte[] chunk = chunks.get(i);
-                if (chunk != null) {
-                    baos.write(chunk);
-                }
-            }
-            return baos.toByteArray();
+            return writeFile.getAbsolutePath();
+//            ByteArrayOutputStream baos = new ByteArrayOutputStream((int) fileSize);
+//            for (int i = 0; i < totalChunks; i++) {
+//                byte[] chunk = chunks.get(i);
+//                if (chunk != null) {
+//                    baos.write(chunk);
+//                }
+//            }
+//            return baos.toByteArray();
         }
     }
     

@@ -9,6 +9,6 @@ public interface FileTransferCallback {
     void onFileChunkReceived(String clientId, String fileId, 
                             int chunkIndex, int chunkSize);
     void onFileTransferCompleted(String clientId, String fileId, 
-                                String fileName, byte[] fileData);
+                                String fileName, String filePath);
     void onFileTransferError(String clientId, String fileId, String error);
 }
