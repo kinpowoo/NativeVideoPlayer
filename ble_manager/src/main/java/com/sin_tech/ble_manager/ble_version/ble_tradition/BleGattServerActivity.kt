@@ -85,7 +85,7 @@ class BleGattServerActivity : AppCompatActivity(){
 
     // 初始化蓝牙适配器
     private fun initBluetooth() {
-        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(this, "当前设备不支持低功耗蓝牙", Toast.LENGTH_SHORT).show()
             finish() // 关闭当前页面
         }
