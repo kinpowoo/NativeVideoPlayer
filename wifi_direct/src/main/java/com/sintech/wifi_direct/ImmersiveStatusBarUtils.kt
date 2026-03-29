@@ -1,4 +1,4 @@
-package com.jhkj.videoplayer.utils
+package com.sintech.wifi_direct
 
 import android.app.Activity
 import android.content.res.Configuration

@@ -107,6 +107,8 @@ dependencies {
 
     implementation project(path: ':gl_player')
     implementation project(path: ':webdav')
+    implementation project(path: ':ble_manager')
+    implementation project(path: ':wifi_direct')
 
 
     //AndroidX 版本

@@ -40,4 +40,5 @@
     <string name="connection_not_accessible">Connection not accessible</string>
 
     <string name="ble">Blue Tool</string>
+    <string name="wifi_direct">WiFi Transfer</string>
 </resources>

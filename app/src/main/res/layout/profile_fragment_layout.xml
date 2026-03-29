@@ -42,4 +42,43 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/wifi_box"
+        android:layout_marginTop="10dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/blue_box"
+        android:layout_marginStart="20dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/icon2"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:scaleType="fitCenter"
+            android:src="@drawable/file_transfer"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            app:tint="@android:color/holo_blue_light" />
+
+        <TextView
+            android:id="@+id/title_wifi"
+            android:text="@string/wifi_direct"
+            android:textSize="16sp"
+            android:textColor="@color/black"
+            android:layout_marginTop="5dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:fontFamily="sans-serif-condensed-medium"
+            app:layout_constraintTop_toBottomOf="@+id/icon2"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

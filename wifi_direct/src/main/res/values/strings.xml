@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+
+    <string name="select_type">选择类型</string>
+    <string name="wifi_client">客户端</string>
+    <string name="wifi_server">服务端</string>
+    <string name="send">发送</string>
+</resources>
