@@ -26,6 +26,7 @@ import com.sintech.wifi_direct.protocol.ClientCallback;
 import com.sintech.wifi_direct.protocol.FileReceiveCallback;
 import org.jspecify.annotations.Nullable;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
@@ -237,7 +238,11 @@ public class WiFiDirectClientService extends Service implements ClientCallback, 
         if (isClientRunning) {
             stopWiFiDirectClient();
         }
-        String cacheDir = context.getCacheDir().getAbsolutePath();
+        File parent = context.getExternalFilesDir("temp");
+        if(parent == null || !parent.exists()){
+            parent.mkdirs();
+        }
+        String cacheDir = parent.getAbsolutePath();
         new Thread(){
             @Override
             public void run() {

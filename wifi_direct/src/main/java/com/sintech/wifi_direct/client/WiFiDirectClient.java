@@ -736,7 +736,7 @@ public class WiFiDirectClient {
             this.fileSize = fileSize;
             this.totalChunks = totalChunks;
             this.parentDir = parentPath;
-            this.writeFile = new File(parentPath, "temp/" + fileName);
+            this.writeFile = new File(parentPath, fileName);
         }
 
         void addChunk(int chunkIndex, byte[] chunkData) throws IOException {
@@ -750,13 +750,13 @@ public class WiFiDirectClient {
                         throw new RuntimeException(e);
                     }
                 }
-                try (RandomAccessFile raf = new RandomAccessFile(writeFile, "w")) {
+                try (RandomAccessFile raf = new RandomAccessFile(writeFile, "rw")) {
                     int offset = chunkIndex * WiFiDirectProtocol.MAX_CHUNK_SIZE;
-                    raf.write(chunkData, offset, chunkData.length);
+                    raf.seek(offset);
+                    raf.write(chunkData, 0, chunkData.length);
                     receivedChunks.incrementAndGet();
                 } catch (IOException e) {
                     Thread.currentThread().interrupt();
-                    throw e;
                 }
             }
 

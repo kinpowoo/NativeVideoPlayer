@@ -1,6 +1,7 @@
-package com.sintech.wifi_direct;
+package com.sintech.wifi_direct.util;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +14,7 @@ import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.RequiresPermission;
@@ -34,6 +36,7 @@ public class WiFiDirectDiscovery {
     private final WifiP2pManager manager;
     private final WifiP2pManager.Channel channel;
     private final DiscoveryCallback callback;
+    private Boolean isDiscovering = false;
     
     private final WifiP2pManager.PeerListListener peerListListener = new WifiP2pManager.PeerListListener() {
         @Override
@@ -84,9 +87,13 @@ public class WiFiDirectDiscovery {
     /**
      * 开始发现设备
      */
-    @RequiresPermission(allOf = {Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.NEARBY_WIFI_DEVICES})
+    @SuppressLint("MissingPermission")
     public void startDiscovery() {
+        if(isDiscovering)return;
+        isDiscovering = true;
+
+        // 1. 先停止之前的发现
+        manager.stopPeerDiscovery(channel, null);
         manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
@@ -110,6 +117,8 @@ public class WiFiDirectDiscovery {
      * 停止发现设备
      */
     public void stopDiscovery() {
+        if(!isDiscovering)return;
+        isDiscovering = false;
         manager.stopPeerDiscovery(channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
@@ -263,8 +272,14 @@ public class WiFiDirectDiscovery {
         } catch (IllegalArgumentException e) {
             // 接收器未注册
         }
-        
+
         removeGroup();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            if (channel != null) {
+                channel.close();
+            }
+        }
+
     }
     
     /**

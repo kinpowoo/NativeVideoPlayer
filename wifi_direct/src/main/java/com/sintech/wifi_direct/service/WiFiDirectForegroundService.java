@@ -17,6 +17,7 @@ import com.sintech.wifi_direct.server.WiFiDirectServer;
 
 import org.jspecify.annotations.Nullable;
 
+import java.io.File;
 import java.lang.ref.WeakReference;
 
 
@@ -244,7 +245,11 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
         }
         
         try {
-            String cacheDir = this.getCacheDir().getAbsolutePath();
+            File parent = this.getExternalFilesDir("temp");
+            if(parent == null || !parent.exists()){
+                parent.mkdirs();
+            }
+            String cacheDir = parent.getAbsolutePath();
             // 启动服务器（使用8888端口）
             wiFiDirectServer = new WiFiDirectServer(8888, cacheDir, this,this);
             wiFiDirectServer.start();

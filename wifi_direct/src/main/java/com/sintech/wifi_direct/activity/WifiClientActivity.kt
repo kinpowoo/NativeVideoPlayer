@@ -7,6 +7,9 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.net.wifi.p2p.WifiP2pDevice
+import android.net.wifi.p2p.WifiP2pGroup
+import android.net.wifi.p2p.WifiP2pInfo
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -14,6 +17,8 @@ import android.os.IBinder
 import android.provider.MediaStore
 import android.provider.Settings
 import android.text.method.ScrollingMovementMethod
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -24,7 +29,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.sintech.wifi_direct.ImmersiveStatusBarUtils
+import com.sintech.wifi_direct.R
+import com.sintech.wifi_direct.util.WiFiDirectDiscovery
+import com.sintech.wifi_direct.adapter.WifiDeviceListAdapter
 import com.sintech.wifi_direct.databinding.WifiClientLayoutBinding
 import com.sintech.wifi_direct.protocol.ClientCallback
 import com.sintech.wifi_direct.protocol.FileReceiveCallback
@@ -33,15 +42,19 @@ import com.sintech.wifi_direct.util.FileUtils
 import com.sintech.wifi_direct.util.UriToPathUtil
 import java.io.File
 import java.lang.ref.WeakReference
+import java.net.InetAddress
 import java.net.InetSocketAddress
 
 
 class WifiClientActivity : AppCompatActivity(),ServiceConnection,ClientCallback,FileReceiveCallback{
-    private val STORAGE_PERMISSION_REQUEST_CODE: Int = 100
+    private val STORAGE_PERMISSION_REQUEST_CODE: Int = 102
+
     private var binding: WifiClientLayoutBinding? = null
     private val sb = StringBuilder()
     private var service: WiFiDirectClientService? = null
     private var isClientRunning = false
+    private var discover: WiFiDirectDiscovery? = null
+    private var deviceAdapter: WifiDeviceListAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,7 +76,21 @@ class WifiClientActivity : AppCompatActivity(),ServiceConnection,ClientCallback,
         )
         startWiFiDirectService()
 
+        deviceAdapter = WifiDeviceListAdapter{
+            connectToServer(it)
+            binding?.deviceList?.visibility = View.GONE
+            binding?.scanBox?.visibility = View.GONE
+        }
+        binding?.deviceList?.layoutManager = LinearLayoutManager(this)
+        binding?.deviceList?.adapter = deviceAdapter
+
+
+        initWifiDiscovery()
+
         binding?.msgArea?.movementMethod = ScrollingMovementMethod.getInstance()
+        binding?.msgArea?.setOnClickListener {
+            binding?.fileType?.visibility = View.GONE
+        }
         binding?.sendBtn?.setOnClickListener {
             val msg = binding?.inputEt?.text?.toString() ?: ""
             if(isConnected()) {
@@ -73,24 +100,81 @@ class WifiClientActivity : AppCompatActivity(),ServiceConnection,ClientCallback,
         }
 
         binding?.pickFileBtn?.setOnClickListener {
-            if(checkStoragePermission()) {
+//            if(checkStoragePermission()) {
                 binding?.fileType?.visibility = View.VISIBLE
-            }else{
-              requestStoragePermission()
-            }
+//            }else{
+//              requestStoragePermission()
+//            }
         }
         binding?.imageType?.setOnClickListener {
             binding?.fileType?.visibility = View.GONE
-            initPickImg()
+            initPickImg("image/*")
         }
         binding?.videoType?.setOnClickListener {
             binding?.fileType?.visibility = View.GONE
-            initPickImg()
+            initPickImg("video/*")
         }
         binding?.fileType?.setOnClickListener {
             openDocument()
             binding?.fileType?.visibility = View.GONE
         }
+    }
+
+    private fun initWifiDiscovery(){
+        if(discover == null){
+            discover = WiFiDirectDiscovery(this,object: WiFiDirectDiscovery.DiscoveryCallback{
+                override fun onWiFiP2pStateChanged(enabled: Boolean) {
+                }
+
+                override fun onDiscoveryStarted() {
+                }
+
+                override fun onDiscoveryFailed(reason: Int) {
+                }
+
+                override fun onPeersDiscovered(peers: List<WifiP2pDevice>?) {
+                    if(peers != null && peers.isNotEmpty()){
+                        deviceAdapter?.addDevices(peers)
+                    }
+                }
+
+                override fun onConnectRequested(device: WifiP2pDevice?) {
+                }
+
+                override fun onConnectFailed(reason: Int) {
+                }
+
+                override fun onConnectionEstablished(
+                    groupOwnerAddress: InetAddress?,
+                    isGroupOwner: Boolean
+                ) {
+
+                }
+
+                override fun onConnectionChanged(
+                    p2pInfo: WifiP2pInfo?,
+                    group: WifiP2pGroup?
+                ) {
+
+                }
+
+                override fun onThisDeviceChanged(device: WifiP2pDevice?) {
+                }
+
+                override fun onGroupCreated() {
+                }
+
+                override fun onGroupCreateFailed(reason: Int) {
+                }
+
+                override fun onGroupRemoved() {
+                }
+            })
+        }
+        discover?.stopDiscovery()
+        discover?.startDiscovery()
+        binding?.deviceList?.visibility = View.VISIBLE
+        binding?.scanBox?.visibility = View.VISIBLE
     }
 
     /**
@@ -106,14 +190,20 @@ class WifiClientActivity : AppCompatActivity(),ServiceConnection,ClientCallback,
     }
 
 
-    private fun initPickImg(){
-        if(checkStoragePermission()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                openAlbum13()
-            } else {
-                openAlbum()
-            }
+    private fun initPickImg(mimeType:String){
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = mimeType
+            addCategory(Intent.CATEGORY_OPENABLE)
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
         }
+        photoOrVideoSelectIntent.launch(intent)
+//        if(checkStoragePermission()) {
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//                openAlbum13()
+//            } else {
+//                openAlbum()
+//            }
+//        }
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -179,9 +269,9 @@ class WifiClientActivity : AppCompatActivity(),ServiceConnection,ClientCallback,
         }
 
 
-    fun connectToServer(){
+    fun connectToServer(dev:WifiP2pDevice){
         service?.connectToServer(this, InetSocketAddress(
-            "192.168.3.24",8888
+            dev.deviceAddress,8888
         ), WeakReference(this),WeakReference(this))
     }
 
@@ -330,13 +420,26 @@ class WifiClientActivity : AppCompatActivity(),ServiceConnection,ClientCallback,
     override fun onServiceConnected(name: ComponentName?, binder: IBinder) {
         service = (binder as WiFiDirectClientService.SerialBinder).service
         service?.setWeakRef(WeakReference(this@WifiClientActivity))
-        connectToServer()
     }
 
     override fun onServiceDisconnected(name: ComponentName?) {
         service = null
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        menu?.clear()
+        menu?.add(0,R.id.scan_btn,0,"")
+            ?.setIcon(R.drawable.ic_brodcast)
+            ?.setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        return super.onPrepareOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if(item.itemId == R.id.scan_btn){
+            initWifiDiscovery()
+        }
+        return super.onOptionsItemSelected(item)
+    }
 
     /**
      * 停止WiFi Direct服务
@@ -351,6 +454,9 @@ class WifiClientActivity : AppCompatActivity(),ServiceConnection,ClientCallback,
     }
 
     override fun onDestroy() {
+        discover?.stopDiscovery()
+        discover?.cleanup()
+        discover = null
         unbindService(this)
         stopWiFiDirectService()
         super.onDestroy()

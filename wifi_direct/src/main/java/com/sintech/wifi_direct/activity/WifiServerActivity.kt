@@ -33,21 +33,21 @@ import com.sintech.wifi_direct.service.WiFiDirectForegroundService
 import com.sintech.wifi_direct.util.FileCopyUtil
 import com.sintech.wifi_direct.util.FileMover
 import com.sintech.wifi_direct.util.FileUtils
+import com.sintech.wifi_direct.util.P2pServiceManager
 import com.sintech.wifi_direct.util.UriToPathUtil
 import java.io.File
 import java.lang.ref.WeakReference
 
 
 class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback,FileTransferCallback{
-    private val PERMISSION_REQUEST_CODE: Int = 100
-    private val BATTERY_OPTIMIZATION_REQUEST: Int = 101
+
     private val STORAGE_PERMISSION_REQUEST_CODE: Int = 102
     private var binding: WifiServerLayoutBinding? = null
     private var clientList = mutableListOf<String>()
     private val sb = StringBuilder()
     private var isServiceRunning = false
     private var service: WiFiDirectForegroundService? = null
-
+    private var p2pManger: P2pServiceManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +62,9 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
         }
 
         binding?.msgArea?.movementMethod = ScrollingMovementMethod.getInstance()
+        binding?.msgArea?.setOnClickListener {
+            binding?.fileType?.visibility = View.GONE
+        }
         binding?.sendBtn?.setOnClickListener {
             val msg = binding?.inputEt?.text?.toString() ?: ""
             clientList.firstOrNull()?.let {
@@ -77,40 +80,59 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
             BIND_AUTO_CREATE
         )
 
-        if (checkPermissions()) {
-            startWiFiDirectService()
-        } else {
-            checkAndRequestPermissions()
-        }
+        p2pManger = P2pServiceManager(this,p2pListener)
+        startWiFiDirectService()
 
         binding?.pickFileBtn?.setOnClickListener {
-            if(checkStoragePermission()) {
+//            if(checkStoragePermission()) {
                 binding?.fileType?.visibility = View.VISIBLE
-            }else{
-                requestStoragePermission()
-            }
+//            }else{
+//                requestStoragePermission()
+//            }
         }
         binding?.imageType?.setOnClickListener {
             binding?.fileType?.visibility = View.GONE
-            initPickImg()
+            initPickImg("image/*")
         }
         binding?.videoType?.setOnClickListener {
             binding?.fileType?.visibility = View.GONE
-            initPickImg()
+            initPickImg("video/*")
         }
         binding?.fileType?.setOnClickListener {
             openDocument()
             binding?.fileType?.visibility = View.GONE
         }
     }
-    private fun initPickImg(){
-        if(checkStoragePermission()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                openAlbum13()
-            } else {
-                openAlbum()
-            }
+
+
+    private val p2pListener = object: P2pServiceManager.ServiceStatusListener {
+        override fun onError(error: String?) {
+
         }
+
+        override fun onServiceStarted(port: Int) {
+
+        }
+
+        override fun onServiceStopped() {
+
+        }
+    }
+
+    private fun initPickImg(mimeType:String){
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = mimeType
+            addCategory(Intent.CATEGORY_OPENABLE)
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
+        }
+        photoOrVideoSelectIntent.launch(intent)
+//        if(checkStoragePermission()) {
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//                openAlbum13()
+//            } else {
+//                openAlbum()
+//            }
+//        }
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -318,104 +340,6 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
         startActivity(intent)
     }
 
-    private fun checkAndRequestPermissions() {
-        val permissionsNeeded: MutableList<String?> = ArrayList<String?>()
-        // 位置权限（WiFi Direct需要）
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissionsNeeded.add(Manifest.permission.ACCESS_COARSE_LOCATION)
-        }
-
-
-        // Android 12+ 需要精确位置
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.BLUETOOTH_SCAN
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                permissionsNeeded.add(Manifest.permission.BLUETOOTH_SCAN)
-            }
-        }
-
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECEIVE_BOOT_COMPLETED
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissionsNeeded.add(Manifest.permission.RECEIVE_BOOT_COMPLETED)
-        }
-
-        if (!permissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(
-                this,
-                permissionsNeeded.toTypedArray<String?>(),
-                PERMISSION_REQUEST_CODE
-            )
-        }
-    }
-
-    /**
-     * 检查所有必要权限
-     */
-    private fun checkPermissions(): Boolean {
-        var isPermissionGranted = true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val locationPermission = ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-                    && ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.BLUETOOTH_SCAN
-            ) == PackageManager.PERMISSION_GRANTED
-            if(!locationPermission){
-                isPermissionGranted = false
-            }
-        } else {
-            val locationPermission = ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-            if(!locationPermission){
-                isPermissionGranted = false
-            }
-        }
-        val bootPermission = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.RECEIVE_BOOT_COMPLETED
-        ) == PackageManager.PERMISSION_GRANTED
-        if(!bootPermission){
-            isPermissionGranted = false
-        }
-        return isPermissionGranted
-    }
-
-    /**
-     * 检查电池优化
-     */
-    private fun checkBatteryOptimization() {
-        val powerManager =
-            getSystemService(POWER_SERVICE) as PowerManager?
-        if (powerManager != null && powerManager.isIgnoringBatteryOptimizations(packageName)) {
-
-        }else{
-            requestBatteryOptimizationExclusion()
-        }
-    }
-
-
     /**
      * 启动WiFi Direct服务
      */
@@ -441,29 +365,13 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
         isServiceRunning = false
     }
 
-
-    /**
-     * 请求电池优化白名单
-     */
-    private fun requestBatteryOptimizationExclusion() {
-        val intent = Intent()
-        intent.action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-        intent.data = ("package:$packageName").toUri()
-
-        try {
-            startActivityForResult(intent, BATTERY_OPTIMIZATION_REQUEST)
-        } catch (e: Exception) {
-            Toast.makeText(this, "无法打开电池优化设置", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if(requestCode == STORAGE_PERMISSION_REQUEST_CODE){
+        if (requestCode == STORAGE_PERMISSION_REQUEST_CODE) {
             var allGranted = true
             for (result in grantResults) {
                 if (result != PackageManager.PERMISSION_GRANTED) {
@@ -475,50 +383,26 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
                 Toast.makeText(this, "需要权限才能传输文件", Toast.LENGTH_SHORT).show()
             }
         }
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            var allGranted = true
-            for (result in grantResults) {
-                if (result != PackageManager.PERMISSION_GRANTED) {
-                    allGranted = false
-                    break
-                }
-            }
-            if (allGranted) {
-                Toast.makeText(this, "权限已获取", Toast.LENGTH_SHORT).show()
-                startWiFiDirectService()
-
-                // 检查电池优化
-                checkBatteryOptimization();
-            } else {
-                Toast.makeText(this, "需要权限才能运行WiFi Direct服务", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == BATTERY_OPTIMIZATION_REQUEST) {
-            checkBatteryOptimization()
-        }
-    }
-
 
 
     // 服务回调
     override fun onServiceConnected(name: ComponentName?, binder: IBinder) {
         service = (binder as WiFiDirectForegroundService.SerialBinder).service
         service?.setWeakRef(WeakReference(this@WifiServerActivity))
+        p2pManger?.startService()
     }
 
     override fun onServiceDisconnected(name: ComponentName?) {
         service = null
+        p2pManger?.stopService()
     }
 
 
     override fun onDestroy() {
         unbindService(this)
         stopWiFiDirectService()
+        p2pManger?.cleanup()
         super.onDestroy()
     }
 }
