@@ -14,8 +14,9 @@ public class FileUtils {
         }
     }
 
-    public static File getDownloadDir(Context context){
-        return context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+    public static File getDownloadDir(){
+        return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+//        return context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
 //        return Environment.getDownloadCacheDirectory();
     }
 }

@@ -2,7 +2,6 @@ package com.sintech.wifi_direct.adapter
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.net.wifi.p2p.WifiP2pDevice
 import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
@@ -10,6 +9,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.sintech.wifi_direct.databinding.DiscoveryItemLayoutBinding
+import com.sintech.wifi_direct.util.DiscoveredService
 
 /**
  * @ClassName: CleanRecordAdapter
@@ -17,8 +17,8 @@ import com.sintech.wifi_direct.databinding.DiscoveryItemLayoutBinding
  * @Author: JJ
  * @CreateDate: 2021/10/26 13:54
  */
-class WifiDeviceListAdapter(private val deviceSelect:(WifiP2pDevice)->Unit): RecyclerView.Adapter<WifiDeviceListAdapter.DeviceItemHolder>(){
-    private val deviceList = mutableListOf<WifiP2pDevice>()
+class WifiDeviceListAdapter(private val deviceSelect:(DiscoveredService)->Unit): RecyclerView.Adapter<WifiDeviceListAdapter.DeviceItemHolder>(){
+    private val deviceList = mutableListOf<DiscoveredService>()
     private lateinit var context: Context
     private var selectIndex = -1
 
@@ -33,14 +33,19 @@ class WifiDeviceListAdapter(private val deviceSelect:(WifiP2pDevice)->Unit): Rec
     /**
      * 添加记录
      */
-    fun addDevices(devices:List<WifiP2pDevice>){
+    fun addDevices(devices:List<DiscoveredService>){
         if(devices.isNotEmpty()){
             deviceList.addAll(devices)
         }
         notifyItemRangeInserted(0,devices.size)
     }
 
-    fun updateDeviceList(devices:List<WifiP2pDevice>){
+    fun appendDevices(device:DiscoveredService){
+        deviceList.add(device)
+        notifyItemInserted(deviceList.size)
+    }
+
+    fun updateDeviceList(devices:List<DiscoveredService>){
         val oldLen = deviceList.size
         deviceList.clear()
         if(oldLen > 0){
@@ -52,7 +57,7 @@ class WifiDeviceListAdapter(private val deviceSelect:(WifiP2pDevice)->Unit): Rec
         }
     }
 
-    fun getSelected(): WifiP2pDevice?{
+    fun getSelected(): DiscoveredService?{
         if(selectIndex < 0 || selectIndex >= deviceList.size)return null
         return deviceList[selectIndex]
     }
@@ -92,17 +97,17 @@ class WifiDeviceListAdapter(private val deviceSelect:(WifiP2pDevice)->Unit): Rec
     override fun onBindViewHolder(holder: DeviceItemHolder, position: Int) {
         if(holder.bindingAdapterPosition == -1 || position >= itemCount)return
         val pos =  holder.bindingAdapterPosition
-        val device = deviceList.getOrNull(pos)
-        if(device != null){
+        val service = deviceList.getOrNull(pos)
+        if(service != null){
+            val device = service.device
             holder.deviceName.text = device.deviceName
             holder.deviceMac.text = device.deviceAddress
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 holder.deviceIp.text = device.ipAddress?.toString() ?: ""
-                holder.deviceIp.visibility = View.VISIBLE
             }else{
-                holder.deviceIp.text = ""
-                holder.deviceIp.visibility = View.GONE
+                holder.deviceIp.text = service.remoteHost
             }
+            holder.deviceIp.visibility = View.VISIBLE
         }else{
             holder.deviceName.text = ""
             holder.deviceMac.text = ""

@@ -161,8 +161,8 @@ public class WiFiDirectClient {
                             // 连接被取消
                             disconnect("Connection cancelled");
                         } catch (IOException e) {
-                            e.printStackTrace();
                             disconnect("IO Exception: " + e.getMessage());
+                            key.cancel();
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -382,12 +382,23 @@ public class WiFiDirectClient {
                 System.err.println("File session not found: " + fileId);
                 return;
             }
+            if (fileCallback != null && fileCallback.get() != null) {
+                fileCallback.get().onFileChunkReceived(
+                        fileId,
+                        chunk.chunkIndex,
+                        chunk.chunkData.length
+                );
+            }
 
             workerPool.submit(new Runnable() {
                 @Override
                 public void run() {
                     try {
                         session.addChunk(chunk.chunkIndex, chunk.chunkData);
+
+                        if (chunk.isLast && session.isComplete()) {
+                            completeFileReceive(session);
+                        }
                     } catch (IOException e) {
                         if (fileCallback != null && fileCallback.get() != null) {
                             fileCallback.get().onFileTransferError(
@@ -397,20 +408,6 @@ public class WiFiDirectClient {
                     }
                 }
             });
-
-
-            if (fileCallback != null && fileCallback.get() != null) {
-                fileCallback.get().onFileChunkReceived(
-                        fileId,
-                        chunk.chunkIndex,
-                        chunk.chunkData.length
-                );
-            }
-
-            if (chunk.isLast && session.isComplete()) {
-                completeFileReceive(session);
-            }
-
         } catch (IOException e) {
             if (fileCallback != null && fileCallback.get() != null) {
                 fileCallback.get().onFileTransferError(
@@ -726,7 +723,6 @@ public class WiFiDirectClient {
         //        final Map<Integer, byte[]> chunks = new ConcurrentHashMap<>();
         final AtomicInteger receivedChunks = new AtomicInteger(0);
         final long startTime = System.currentTimeMillis();
-        private String parentDir;
         private File writeFile;
 
         FileReceiveSession(String fileId, String fileName, long fileSize, int totalChunks,
@@ -735,21 +731,18 @@ public class WiFiDirectClient {
             this.fileName = fileName;
             this.fileSize = fileSize;
             this.totalChunks = totalChunks;
-            this.parentDir = parentPath;
             this.writeFile = new File(parentPath, fileName);
+            if (!writeFile.exists()) {
+                try {
+                    writeFile.createNewFile();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
 
         void addChunk(int chunkIndex, byte[] chunkData) throws IOException {
             if (writeFile != null) {
-                if (!writeFile.exists()) {
-                    try {
-                        if (writeFile != null) {
-                            writeFile.createNewFile();
-                        }
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
                 try (RandomAccessFile raf = new RandomAccessFile(writeFile, "rw")) {
                     int offset = chunkIndex * WiFiDirectProtocol.MAX_CHUNK_SIZE;
                     raf.seek(offset);
@@ -759,7 +752,6 @@ public class WiFiDirectClient {
                     Thread.currentThread().interrupt();
                 }
             }
-
 //            if (chunks.putIfAbsent(chunkIndex, chunkData) == null) {
 //                receivedChunks.incrementAndGet();
 //            }

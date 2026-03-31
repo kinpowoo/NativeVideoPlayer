@@ -144,7 +144,7 @@ public class WiFiDirectClientService extends Service implements ClientCallback, 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("WiFi Direct 服务运行中")
             .setContentText("正在保持连接，点击返回应用")
-            .setSmallIcon(R.drawable.wifi_notify_small)
+            .setSmallIcon(R.drawable.ic_brodcast)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -261,7 +261,7 @@ public class WiFiDirectClientService extends Service implements ClientCallback, 
                         @Override
                         public void run() {
                             onDisconnected(error);
-                            updateNotification("服务器启动失败");
+                            updateNotification("客户端启动失败");
                         }
                     });
 

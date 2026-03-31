@@ -2,6 +2,7 @@ package com.sintech.wifi_direct.server;
 
 import android.content.Context;
 import android.os.Environment;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.sintech.wifi_direct.protocol.FileTransferCallback;
@@ -12,9 +13,13 @@ import com.sintech.wifi_direct.protocol.WiFiDirectProtocol.FileMeta;
 import com.sintech.wifi_direct.protocol.WiFiDirectProtocol.FileChunk;
 
 import java.io.*;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.StandardCharsets;
@@ -105,7 +110,7 @@ public class WiFiDirectServer {
         
         System.out.println("WiFi Direct Server initialized on port " + port);
     }
-    
+
     /**
      * 启动服务器
      */
@@ -154,8 +159,10 @@ public class WiFiDirectServer {
                             // 连接被取消
                         } catch (IOException e) {
                             // IO异常，关闭连接
+//                            key.cancel();
                             closeChannel(key);
                         } catch (Exception e) {
+//                            key.cancel();
                             closeChannel(key);
                         }
                     }
@@ -445,6 +452,10 @@ public class WiFiDirectServer {
                 public void run() {
                     try {
                         transfer.addChunk(chunk.chunkIndex, chunk.chunkData);
+                        // 检查是否完成
+                        if (chunk.isLast && transfer.isComplete()) {
+                            completeFileTransfer(session, transfer);
+                        }
                     } catch (IOException e) {
                         sendFileError(session, "write file chunk data to local temp file failed");
                     }
@@ -452,22 +463,15 @@ public class WiFiDirectServer {
             });
             // 发送确认
             sendFileAck(session, fileId, chunk.chunkIndex + 1, "CHUNK");
-            
             if (fileCallback != null) {
-                workerPool.submit(() -> 
-                    fileCallback.onFileChunkReceived(
-                        session.clientId,
-                        fileId,
-                        chunk.chunkIndex,
-                        chunk.chunkData.length
-                    )
+                workerPool.submit(() ->
+                        fileCallback.onFileChunkReceived(
+                                session.clientId,
+                                fileId,
+                                chunk.chunkIndex,
+                                chunk.chunkData.length
+                        )
                 );
-            }
-            
-            // 检查是否完成
-//            if (chunk.isLast && transfer.isComplete()) {
-            if (chunk.isLast) {
-                completeFileTransfer(session, transfer);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -983,29 +987,24 @@ public class WiFiDirectServer {
             this.fileSize = fileSize;
             this.parentDir = parentDirPath;
             this.writeFile = new File(parentDirPath,fileName);
+            if(!writeFile.exists()) {
+                try {
+//                      writeFile.mkdir();
+                    writeFile.createNewFile();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
             this.totalChunks = totalChunks;
         }
         
         void addChunk(int chunkIndex, byte[] chunkData) throws IOException{
             if(writeFile != null){
-                if(!writeFile.exists()) {
-                    try {
-                        if (writeFile != null) {
-//                            writeFile.mkdir();
-                            writeFile.createNewFile();
-                        }
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
                 RandomAccessFile raf = null;
                 try{
                     raf = new RandomAccessFile(writeFile,"rw");
                     int offset = chunkIndex*WiFiDirectProtocol.MAX_CHUNK_SIZE;
-                    long pointer = (long)offset * chunkIndex;
-                    if(pointer < raf.length()){
-                        raf.seek(pointer);
-                    }
+                    raf.seek(offset);
                     raf.write(chunkData,0,chunkData.length);
                     receivedChunks.incrementAndGet();
                 }catch (IOException e) {

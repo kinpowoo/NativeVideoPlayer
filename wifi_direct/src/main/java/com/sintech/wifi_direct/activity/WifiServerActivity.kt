@@ -73,22 +73,28 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
             binding?.inputEt?.setText("")
         }
 
+        p2pManger = P2pServiceManager(this, p2pListener)
         //绑定服务
         bindService(
             Intent(this, WiFiDirectForegroundService::class.java),
             this,
             BIND_AUTO_CREATE
         )
-
-        p2pManger = P2pServiceManager(this,p2pListener)
         startWiFiDirectService()
 
         binding?.pickFileBtn?.setOnClickListener {
-//            if(checkStoragePermission()) {
+            if(checkStoragePermission()) {
                 binding?.fileType?.visibility = View.VISIBLE
-//            }else{
-//                requestStoragePermission()
-//            }
+            }else{
+                AlertDialog.Builder(this)
+                    .setMessage("需要授予存储访问权限")
+                    .setPositiveButton("授予") { which, dialog ->
+                        requestStoragePermission()
+                    }
+                    .setNegativeButton("拒绝") { which, dialog ->
+                    }
+                    .create().show()
+            }
         }
         binding?.imageType?.setOnClickListener {
             binding?.fileType?.visibility = View.GONE
@@ -107,15 +113,12 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
 
     private val p2pListener = object: P2pServiceManager.ServiceStatusListener {
         override fun onError(error: String?) {
-
         }
 
         override fun onServiceStarted(port: Int) {
-
         }
 
         override fun onServiceStopped() {
-
         }
     }
 
@@ -215,18 +218,18 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
     override fun onClientConnected(clientId: String) {
         println("Client connected: $clientId")
         clientList.add(clientId)
-        appendStrAndShow("Client connected: $clientId")
+        appendStrAndShow("Client connected")
     }
 
     override fun onClientDisconnected(clientId: String, reason: String?) {
-        println("Client disconnected: $clientId - $reason")
+        println("Client disconnected: $reason")
         clientList.remove(clientId)
-        appendStrAndShow("Client disconnected: $clientId - $reason")
+        appendStrAndShow("Client disconnected: $reason")
     }
 
     override fun onMessageReceived(clientId: String, message: String?) {
-        println("Message from $clientId: $message")
-        appendStrAndShow("Message from $clientId: $message")
+        println("receive: $message")
+        appendStrAndShow("Receive Message: $message")
     }
 
     override fun onHeartbeatReceived(clientId: String) {
@@ -246,6 +249,7 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
         clientId: String?, fileId: String?,
         fileName: String?, fileSize: Long
     ) {
+        appendStrAndShow("Receive file: $fileName")
         if(!checkStoragePermission()) {
             runOnUiThread {
                 AlertDialog.Builder(this)
@@ -256,16 +260,6 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
                     }
                     .setNegativeButton("拒绝") { which, dialog ->
                         Toast.makeText(this, "需要存储权限才能传输文件", Toast.LENGTH_SHORT).show()
-                    }
-                    .create().show()
-            }
-        }else{
-            runOnUiThread {
-                AlertDialog.Builder(this)
-                    .setTitle("新文件接收提醒")
-                    .setMessage("$fileName 将被接收")
-                    .setPositiveButton("确定") { which, dialog ->
-
                     }
                     .create().show()
             }
@@ -282,17 +276,30 @@ class WifiServerActivity : AppCompatActivity(), ServiceConnection,ServerCallback
 
     override fun onFileTransferCompleted(
         clientId: String?, fileId: String?,
-        fileName: String?, filePath: String
+        fileName: String, filePath: String
     ) {
         // 保存文件
-        if(checkStoragePermission()) {
-            appendStrAndShow("接收文件完成:$filePath")
-            val downloadDir = FileUtils.getDownloadDir(this)
-            if (downloadDir != null && fileName != null) {
-                val destFile = File(downloadDir, fileName)
-                FileCopyUtil.copyFileByStream(File(filePath),destFile)
+        appendStrAndShow("receive file complete: $fileName")
+       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+           val srcFile = File(filePath)
+           if(srcFile.exists()) {
+               val mimeType = UriToPathUtil.getFileType(srcFile)
+               val uri = UriToPathUtil.genValues(this, fileName, mimeType,
+                   "WiFiDirect")
+               val isSuc = UriToPathUtil.saveFileToUri(this,srcFile,uri)
+               if(isSuc){
+                   srcFile.delete();
+               }
+           }
+        } else {
+           if(checkStoragePermission()) {
+               val downloadDir = FileUtils.getDownloadDir()
+               if (downloadDir != null) {
+                   val destFile = File(downloadDir, fileName)
+                   FileCopyUtil.copyFileByStream(File(filePath),destFile)
 //                FileUtils.moveFile(filePath, destFile)
-            }
+               }
+           }
         }
     }
 

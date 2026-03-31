@@ -34,7 +34,6 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
     
     // 服务器实例
     private WiFiDirectServer wiFiDirectServer;
-    private boolean isServerRunning = false;
 
     private final IBinder binder;
 
@@ -90,10 +89,7 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "WiFiDirectForegroundService started");
-        
-        // 启动WiFi Direct服务器
         startWiFiDirectServer();
-        
         // 返回START_STICKY，系统会自动重启服务
         return START_STICKY;
     }
@@ -135,7 +131,7 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
         return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("WiFi Direct 服务运行中")
             .setContentText("正在保持连接，点击返回应用")
-            .setSmallIcon(R.drawable.wifi_notify_small)
+            .setSmallIcon(R.drawable.ic_brodcast)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -240,10 +236,7 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
      * 启动WiFi Direct服务器
      */
     private void startWiFiDirectServer() {
-        if (isServerRunning) {
-            return;
-        }
-        
+        stopWiFiDirectServer();
         try {
             File parent = this.getExternalFilesDir("temp");
             if(parent == null || !parent.exists()){
@@ -253,8 +246,7 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
             // 启动服务器（使用8888端口）
             wiFiDirectServer = new WiFiDirectServer(8888, cacheDir, this,this);
             wiFiDirectServer.start();
-            
-            isServerRunning = true;
+
             Log.d(TAG, "WiFi Direct server started on port 8888");
             updateNotification("等待设备连接...");
             
@@ -376,7 +368,6 @@ public class WiFiDirectForegroundService extends Service implements ServerCallba
             try {
                 wiFiDirectServer.shutdown();
                 wiFiDirectServer = null;
-                isServerRunning = false;
                 Log.d(TAG, "WiFi Direct server stopped");
             } catch (Exception e) {
                 Log.e(TAG, "Error stopping WiFi Direct server", e);

@@ -1,25 +1,205 @@
 package com.sintech.wifi_direct.util;
 
+import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Parcel;
+import android.os.ParcelFileDescriptor;
+import android.os.Parcelable;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.text.TextUtils;
 import android.util.Log;
 
+import androidx.annotation.RequiresApi;
+
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 public class UriToPathUtil {
     private static final String TAG = "UriToPathUtil";
-    
+
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    public static Uri genValues(Context ctx, String fileName, String mimeType,String appName){
+        ContentValues values = new ContentValues();
+        Uri collection;
+        if(mimeType.startsWith("image/")){
+            //allowed directories are [DCIM, Pictures]
+            collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            values.put(MediaStore.Images.Media.DISPLAY_NAME,fileName);
+            values.put(MediaStore.Images.Media.MIME_TYPE,mimeType);
+            values.put(MediaStore.Images.Media.RELATIVE_PATH,"Pictures/"+appName);
+            values.put(MediaStore.Images.Media.IS_PENDING, 0);
+        }else if(mimeType.startsWith("audio/")){
+            //allowed directories are [Alarms, Music, Notifications, Podcasts, Ringtones]
+            collection = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            values.put(MediaStore.Audio.Media.DISPLAY_NAME,fileName);
+            values.put(MediaStore.Audio.Media.MIME_TYPE,mimeType);
+            values.put(MediaStore.Audio.Media.RELATIVE_PATH,"Music/"+appName);
+            values.put(MediaStore.Audio.Media.IS_PENDING, 0);
+        }else if(mimeType.startsWith("video/")){
+            //allowed directories are [DCIM, Movies]
+            collection = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            values.put(MediaStore.Video.Media.DISPLAY_NAME,fileName);
+            values.put(MediaStore.Video.Media.MIME_TYPE,mimeType);
+            values.put(MediaStore.Video.Media.RELATIVE_PATH,"Movies/"+appName);
+            values.put(MediaStore.Video.Media.IS_PENDING, 0);
+        }else{
+            collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            values.put(MediaStore.Files.FileColumns.DISPLAY_NAME,fileName);
+            values.put(MediaStore.Files.FileColumns.MIME_TYPE,mimeType);
+            values.put(MediaStore.Files.FileColumns.RELATIVE_PATH,"Documents/"+appName);
+            values.put(MediaStore.Files.FileColumns.IS_PENDING, 0);
+        }
+        if(collection!=null){
+            Uri item = ctx.getContentResolver().insert(collection, values);
+            if(item!=null){
+                try {
+                    @SuppressLint("Recycle")
+                    ParcelFileDescriptor fileDescriptor =
+                            ctx.getContentResolver().openFileDescriptor(item, "w", null);
+                    Parcel out = Parcel.obtain();
+                    if (fileDescriptor != null) {
+                        fileDescriptor.writeToParcel(out, Parcelable.PARCELABLE_WRITE_RETURN_VALUE);
+                    }
+                    return item;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+
+    public static String getFileType(Context ctx,Uri uri){
+        if ("file".equals(uri.getScheme())){
+            String fileName = uri.getPath();
+            if(fileName == null){
+                fileName = "";
+            }
+            if(fileName.endsWith(".mp4")){
+                return  "video/*";
+            }else if(fileName.endsWith(".jpg") ||
+                    fileName.endsWith(".png") ||
+                    fileName.endsWith(".jpeg") ||
+                    fileName.endsWith(".webp") ||
+                    fileName.endsWith(".JPG") ||
+                    fileName.endsWith(".PNG") ||
+                    fileName.endsWith(".JPEG") ||
+                    fileName.endsWith(".WEBP")){
+                return  "image/*";
+            }else{
+                return  "*/*";
+            }
+        }else{
+            return ctx.getContentResolver().getType(uri);
+        }
+    }
+
+    public static String getFileType(File file){
+        String fileName = file.getPath();
+        if(fileName.endsWith(".mp4") ||
+                fileName.endsWith(".mkv") ||
+                fileName.endsWith(".rmvb") ||
+                fileName.endsWith(".ts")){
+            return  "video/*";
+        }else if(fileName.endsWith(".jpg") ||
+                fileName.endsWith(".png") ||
+                fileName.endsWith(".jpeg") ||
+                fileName.endsWith(".webp") ||
+                fileName.endsWith(".JPG") ||
+                fileName.endsWith(".PNG") ||
+                fileName.endsWith(".JPEG") ||
+                fileName.endsWith(".WEBP")){
+            return  "image/*";
+        }else if(fileName.endsWith(".mp3") ||
+                fileName.endsWith(".ogg") ||
+                fileName.endsWith(".flac") ||
+                fileName.endsWith(".wav") ||
+                fileName.endsWith(".dst") ||
+                fileName.endsWith(".ape")){
+            return  "audio/*";
+        }else{
+            return  "*/*";
+        }
+    }
+
+    //提醒文件被移除
+    public static void notifyFileDelete(Context context,String mimeType,String fileAbsolutePath){
+        String mediaType = "";
+        Uri fileUri = null;
+        if(mimeType.startsWith("image/")){
+            mediaType = MediaStore.Images.Media.DATA + "=?";
+            fileUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        }else if(mimeType.startsWith("video/")){
+            mediaType = MediaStore.Video.Media.DATA + "=?";
+            fileUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+        }else if(mimeType.startsWith("audio/")){
+            mediaType = MediaStore.Audio.Media.DATA + "=?";
+            fileUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+        }
+        if(fileUri!=null) {
+            context.getContentResolver().delete(fileUri, mediaType, new String[]{fileAbsolutePath});
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    public static void closeContentValues(Context ctx, String mimeType, Uri con){
+        ContentValues values = new ContentValues();
+        if(mimeType.startsWith("image/")){
+            values.put(MediaStore.Images.Media.IS_PENDING, 0); //释放，使其他应用可以访问
+        }else if(mimeType.startsWith("audio/")){
+            values.put(MediaStore.Audio.Media.IS_PENDING, 0); //释放，使其他应用可以访问
+        }else if(mimeType.startsWith("video/")){
+            values.put(MediaStore.Video.Media.IS_PENDING, 0); //释放，使其他应用可以访问
+        }else{
+            values.put(MediaStore.Files.FileColumns.IS_PENDING, 0); //释放，使其他应用可以访问
+        }
+        if(con!=null){
+            ctx.getContentResolver().update(con, values, null, null);
+        }
+    }
+
+
+    public static boolean saveFileToUri(Context context,File file, Uri saveUri) {
+        OutputStream outputStream;
+        String mimeType = getFileType(file);
+        try {
+            outputStream = context.getContentResolver().openOutputStream(saveUri);
+            InputStream inputStream = new FileInputStream(file);
+            if (outputStream != null) {
+                int len = 0;
+                byte[] buf = new byte[4096];
+                while((len = inputStream.read(buf)) !=-1){
+                    outputStream.write(buf,0,len);
+                }
+                inputStream.close();
+                outputStream.close();
+            }
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                closeContentValues(context,mimeType,saveUri);
+            }
+        }
+        return false;
+    }
+
     /**
      * 将 Uri 转换为可能的文件路径（高版本 Android 可能返回 null 或临时文件路径）
      * 
