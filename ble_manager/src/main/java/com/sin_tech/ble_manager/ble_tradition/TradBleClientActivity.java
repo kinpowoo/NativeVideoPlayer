@@ -1,5 +1,6 @@
-package com.sin_tech.ble_manager.ble_version.ble_low_power;
+package com.sin_tech.ble_manager.ble_tradition;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import android.annotation.SuppressLint;
@@ -68,6 +69,14 @@ public class TradBleClientActivity extends Activity {
 				Log.d(tag, "连接建立.");
 			} catch (Exception e) {
 				e.printStackTrace();
+			}finally {
+				if(socket != null) {
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+						Log.d(tag, "连接断开.");
+                    }
+                }
 			}
 		}
 	}
@@ -90,7 +99,6 @@ public class TradBleClientActivity extends Activity {
 
 	@Override
 	protected void onDestroy() {
-		super.onDestroy();
 		if(clientThread != null){
 			try {
 				clientThread.interrupt();
@@ -101,5 +109,6 @@ public class TradBleClientActivity extends Activity {
 			}
 		}
 		unregisterReceiver(mReceiver);
+		super.onDestroy();
 	}
 }

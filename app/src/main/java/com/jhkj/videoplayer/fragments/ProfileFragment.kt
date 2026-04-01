@@ -5,10 +5,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.ViewModelProvider
 import com.jhkj.videoplayer.databinding.ProfileFragmentLayoutBinding
 import com.jhkj.videoplayer.viewmodels.HomeFragmentVm
+import com.sin_tech.ble_manager.ble_tradition.activity.SelectBlueHostOrGuest
 import com.sintech.wifi_direct.activity.SelectHostOrGuest
 
 class ProfileFragment: VisibilityFragment() {
@@ -29,6 +29,9 @@ class ProfileFragment: VisibilityFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding?.blueBox?.setOnClickListener {
+            startActivity(Intent(activity, SelectBlueHostOrGuest::class.java))
+        }
         binding?.wifiBox?.setOnClickListener {
             startActivity(Intent(activity, SelectHostOrGuest::class.java))
         }

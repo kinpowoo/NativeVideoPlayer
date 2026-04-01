@@ -1,7 +1,6 @@
-package com.sin_tech.ble_manager.ble_version.ble_tradition
+package com.sin_tech.ble_manager.ble_tradition
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
@@ -102,7 +101,7 @@ class BleGattServerActivity : AppCompatActivity(){
     //申请蓝牙权限
     private val bluetoothPermissionLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if(it.resultCode == Activity.RESULT_OK){
+            if(it.resultCode == RESULT_OK){
                 //如果通过了权限，进入下一页面
             }else{
 

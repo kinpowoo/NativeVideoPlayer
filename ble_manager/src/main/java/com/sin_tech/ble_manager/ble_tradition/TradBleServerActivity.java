@@ -1,4 +1,4 @@
-package com.sin_tech.ble_manager.ble_version.ble_low_power;
+package com.sin_tech.ble_manager.ble_tradition;
 
 import java.util.UUID;
 
@@ -12,11 +12,10 @@ import android.os.Bundle;
 import android.util.Log;
 
 public class TradBleServerActivity extends Activity {
-
-	private BluetoothAdapter mBluetoothAdapter;
-
 	private final String tag = "zhangphil";
 	private final String MY_UUID = "00001101-0000-1000-8000-00805F9B34FB";
+	private BluetoothAdapter mBluetoothAdapter;
+
 	private boolean isServerRunning = true;
 
 	private class ServerThread extends Thread {

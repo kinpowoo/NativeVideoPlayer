@@ -1,4 +1,4 @@
-package com.sin_tech.ble_manager.ble_version.ble_tradition
+package com.sin_tech.ble_manager.ble_tradition
 
 import java.util.UUID
 
