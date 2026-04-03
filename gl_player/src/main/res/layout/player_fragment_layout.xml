@@ -120,6 +120,21 @@
             android:layout_width="32dp"
             android:layout_height="32dp"/>
 
+        <TextView
+            android:id="@+id/file_name"
+            app:layout_constraintTop_toTopOf="@+id/back_btn_hor"
+            app:layout_constraintStart_toEndOf="@+id/back_btn_hor"
+            app:layout_constraintEnd_toStartOf="@+id/backward_30"
+            android:textSize="14sp"
+            android:singleLine="false"
+            android:fontFamily="sans-serif"
+            android:textColor="@android:color/white"
+            android:layout_marginTop="5dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"/>
+
         <ImageView
             android:id="@+id/backward_30"
             app:layout_constraintEnd_toStartOf="@+id/forward_30"

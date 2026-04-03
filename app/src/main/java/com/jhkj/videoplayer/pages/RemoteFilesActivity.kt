@@ -3,10 +3,12 @@ package com.jhkj.videoplayer.pages
 import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
+import com.jhkj.videoplayer.R
 import com.jhkj.videoplayer.adapter.FileInfoListAdapter
 import com.jhkj.videoplayer.app.BaseActivity
 import com.jhkj.videoplayer.components.LoadingDialog
@@ -16,6 +18,7 @@ import com.jhkj.videoplayer.databinding.RemoteFilesLayoutBinding
 import com.jhkj.videoplayer.utils.ImmersiveStatusBarUtils
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import com.jhkj.videoplayer.viewmodels.RemoteProvider
+import com.jhkj.videoplayer.viewmodels.SmbVM
 import com.jhkj.videoplayer.viewmodels.WebdavViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,11 +43,6 @@ class RemoteFilesActivity: BaseActivity() {
             connDto = intent.getSerializableExtra("connInfo") as? ConnInfo
         }
 
-        connDto?.let{ conn ->
-            if(conn.connType == ConnType.WEBDAV.ordinal) {
-                remoteVM = ViewModelProvider(this)[this.javaClass.name, WebdavViewModel::class.java]
-            }
-        }
         loadingDialog = LoadingDialog(this)
 
 
@@ -75,7 +73,30 @@ class RemoteFilesActivity: BaseActivity() {
             onBackPressClick()
         }
 
-        initPath()
+
+        connDto?.let{ conn ->
+            if(conn.connType == ConnType.WEBDAV.ordinal) {
+                remoteVM = ViewModelProvider(this)[this.javaClass.name, WebdavViewModel::class.java]
+                initPath()
+            }else{
+                val sbmVm = ViewModelProvider(this)[this.javaClass.name, SmbVM::class.java]
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val client = sbmVm.initClient(conn)
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        if (client == null) {
+                            Toast.makeText(
+                                this@RemoteFilesActivity,
+                                R.string.connection_error, Toast.LENGTH_SHORT
+                            ).show()
+                            finishAfterTransition()
+                        } else {
+                            initPath()
+                        }
+                    }
+                }
+                remoteVM = sbmVm
+            }
+        }
     }
 
     private fun initPath(){

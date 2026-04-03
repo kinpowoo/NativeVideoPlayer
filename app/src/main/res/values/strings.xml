@@ -21,6 +21,7 @@
     <string name="connect_as">Connect As</string>
     <string name="username">Username:</string>
     <string name="password">Password:</string>
+    <string name="edit_conn_tips">If you want access lan network shared folder,use \"domain\\username\" or \"username@domain\" format as username</string>
 
     <string name="save_success">Saved!</string>
     <string name="save_failed">Save Failed!</string>
@@ -38,6 +39,8 @@
     <string name="edit">Edit</string>
     <string name="delete">Delete</string>
     <string name="connection_not_accessible">Connection not accessible</string>
+    <string name="connection_info_not_valid">Connection info not valid</string>
+    <string name="connection_error">Connect error occur!</string>
 
     <string name="ble">Blue Tool</string>
     <string name="wifi_direct">WiFi Transfer</string>

@@ -8,6 +8,7 @@ import android.os.Build
 import android.util.Log
 import com.jhkj.gl_player.AppCore
 import com.jhkj.videoplayer.compose_pages.room_dto.AppDatabase
+import com.jhkj.videoplayer.third_file_framework.smb.BySMB
 import com.jhkj.videoplayer.utils.multi_lan.TextResManager
 import com.tencent.mmkv.MMKV
 
@@ -74,6 +75,12 @@ class MainApplication : Application() {
         instance = this
         // 提前初始化数据库（可选）
         AppDatabase.getInstance(this)
+
+        // 高级配置（可选）
+        BySMB.initProperty(
+            soTimeout = "5000",  // Socket超时时间(毫秒)
+            responseTimeout = "5000"  // 响应超时时间(毫秒)
+        )
 
         TextResManager.get().intTextResource(this)
     }

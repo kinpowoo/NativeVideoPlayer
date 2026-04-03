@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
@@ -36,6 +37,7 @@ import com.sin_tech.ble_manager.utils.ImmersiveStatusBarUtils
 import com.sin_tech.ble_manager.utils.UriToPathUtil
 import java.io.File
 import java.lang.ref.WeakReference
+import java.util.UUID
 
 
 class BlueServerActivity : AppCompatActivity(), ServiceConnection, ClientCallback,
@@ -391,6 +393,7 @@ class BlueServerActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
 
 
     // 服务回调
+    @SuppressLint("MissingPermission")
     override fun onServiceConnected(name: ComponentName?, binder: IBinder) {
         service = (binder as BlueServerService.SerialBinder).service
         service?.setWeakRef(WeakReference(this@BlueServerActivity))

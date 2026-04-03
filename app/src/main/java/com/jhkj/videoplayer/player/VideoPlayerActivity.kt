@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.Settings
+import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.ActivityResultLauncher
@@ -31,6 +32,7 @@ import com.jhkj.videoplayer.databinding.VideoPlayerLayoutBinding
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 import java.lang.ref.WeakReference
 
 
@@ -130,8 +132,13 @@ class VideoPlayerActivity : AppCompatActivity(){
         if (uri != null) {
             val path = ContentUriUtil.getPath(this, uri)
 //            playerFragment?.loadUri(uri)
-            playerFragment?.loadUrl(path)
-            binding.pickVideo.visibility = View.GONE
+            if(!TextUtils.isEmpty(path)){
+                val fileName = File(path).name
+                playerFragment?.setFileName(fileName)
+                playerFragment?.loadUrl(path)
+                binding.pickVideo.visibility = View.GONE
+            }
+
 //            Toast.makeText(this, "获得path:$path", Toast.LENGTH_SHORT).show()
         } else {
 //            Toast.makeText(this, "外部传入的uri为null", Toast.LENGTH_SHORT).show()
@@ -141,6 +148,7 @@ class VideoPlayerActivity : AppCompatActivity(){
                 intent.getSerializableExtra("fileItem") as? FileItem
             }
             if(fileInfo != null){
+                playerFragment?.setFileName(fileInfo.fileName)
                 val webResFile = WebResourceFile(fileInfo.path,
                     fileInfo.credentialUser ?: "",fileInfo.credentialPass ?: "")
                 lifecycleScope.launch(Dispatchers.IO) {

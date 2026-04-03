@@ -75,7 +75,7 @@ dependencies {
     implementation "androidx.fragment:fragment-ktx:1.8.9"  // 用于 Fragment
 
 
-    def lifecycleVer = "2.6.2"
+    def lifecycleVer = "2.10.0"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVer"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVer"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVer"
@@ -113,4 +113,7 @@ dependencies {
 
     //AndroidX 版本
     implementation 'com.github.jenly1314:zxing-lite:3.4.1'
+
+    // 读取及写入网络共享文件smb库
+    implementation 'com.hierynomus:smbj:0.14.0'
 }

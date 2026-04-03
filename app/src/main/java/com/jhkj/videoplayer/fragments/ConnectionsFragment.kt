@@ -11,14 +11,18 @@ import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import cody.bus.ElegantBus
+import cody.bus.ObserverWrapper
 import com.jhkj.videoplayer.R
 import com.jhkj.videoplayer.adapter.ConnListAdapter
 import com.jhkj.videoplayer.components.LoadingDialog
 import com.jhkj.videoplayer.components.RecyclerViewWithContextMenu.RecyclerViewContextInfo
 import com.jhkj.videoplayer.compose_pages.models.ConnInfo
 import com.jhkj.videoplayer.databinding.ConnFragmentLayoutBinding
+import com.jhkj.videoplayer.pages.ConnType
 import com.jhkj.videoplayer.pages.ConnectionEditActivity
 import com.jhkj.videoplayer.pages.RemoteFilesActivity
+import com.jhkj.videoplayer.pages.SelectConnTypeActivity
 import com.jhkj.videoplayer.utils.RemoteConnTest
 import com.jhkj.videoplayer.utils.Res
 import com.jhkj.videoplayer.viewmodels.ConnInfoVm
@@ -34,6 +38,7 @@ class ConnectionsFragment: VisibilityFragment() {
     private val vm: ConnInfoVm by activityViewModels()  // Activity 作用域
     private var connAdapter: ConnListAdapter? = null
     private var loadingDialog: LoadingDialog? = null
+    private var clickIndex = -1
     // 方式2：传统方式
 //    val viewModel = ViewModelProvider(this)[ConnInfoVm::class.java]
 //    val activityViewModel = ViewModelProvider(requireActivity())[ConnInfoVm::class.java]
@@ -51,20 +56,14 @@ class ConnectionsFragment: VisibilityFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         loadingDialog = LoadingDialog(requireContext())
-        binding?.addConn?.setOnClickListener {
-            if(isDoubleClick(it))return@setOnClickListener
-
-        }
 
         connAdapter = ConnListAdapter({ item,idx ->
-            loadingDialog?.show()
             lifecycleScope.launch(Dispatchers.IO){
                 val isConnective = RemoteConnTest.testConn(item)
                 withContext(Dispatchers.Main){
-                    loadingDialog?.dismiss()
                     if(isConnective){
                         val tent = Intent(requireContext(), RemoteFilesActivity::class.java)
-                        tent.putExtra("connInfo",item)
+                        tent.putExtra("connInfo", item)
                         startActivity(tent)
                     }else{
                         showToast(Res.string(R.string.connection_not_accessible))
@@ -74,6 +73,7 @@ class ConnectionsFragment: VisibilityFragment() {
         }){ item,idx,view ->
             val x = view.x
             val y = view.y
+            clickIndex = idx
             binding?.connectionList?.showContextMenu(x-60,y)
         }
         binding?.connectionList?.layoutManager = LinearLayoutManager(requireContext())
@@ -83,6 +83,19 @@ class ConnectionsFragment: VisibilityFragment() {
             // 为 RecyclerView 注册上下文菜单
             registerForContextMenu(it)
         }
+        binding?.addConn?.setOnClickListener {
+            if(isDoubleClick(it))return@setOnClickListener
+            startActivity(Intent(activity, SelectConnTypeActivity::class.java))
+        }
+
+        ElegantBus.getDefault("ConnUpdate").observe(this,
+            object: ObserverWrapper<Any>(){
+                override fun onChanged(var1: Any?){
+                    vm.getAllConn {
+                        connAdapter?.addConn(it)
+                    }
+                }
+            })
     }
 
     // 创建上下文菜单
@@ -93,7 +106,7 @@ class ConnectionsFragment: VisibilityFragment() {
     ) {
         super.onCreateContextMenu(menu, v, menuInfo)
         val inflater: MenuInflater? = activity?.getMenuInflater()
-        inflater?.inflate(com.jhkj.videoplayer.R.menu.remote_connection_item_menu, menu) // 加载菜单资源
+        inflater?.inflate(R.menu.remote_connection_item_menu, menu) // 加载菜单资源
     }
 
     // 处理菜单项点击事件
@@ -101,17 +114,16 @@ class ConnectionsFragment: VisibilityFragment() {
         // 关键：获取传递过来的位置信息
         val menuInfo = item.menuInfo
         if (menuInfo is RecyclerViewContextInfo) {
-            val info = menuInfo
-            val position = info.position
-            val selectedData: ConnInfo? = connAdapter?.getItem(position)
+            val selectedData: ConnInfo? = connAdapter?.getItem(clickIndex)
+            clickIndex = -1
             when (item.itemId) {
-                com.jhkj.videoplayer.R.id.menu_edit -> {                 // 处理编辑操作
+                R.id.menu_edit -> {                 // 处理编辑操作
                     val tent = Intent(requireContext(), ConnectionEditActivity::class.java)
                     tent.putExtra("connInfo",selectedData)
                     startActivity(tent)
                     return true
                 }
-                com.jhkj.videoplayer.R.id.menu_delete -> {
+                R.id.menu_delete -> {
                     // 处理删除操作
                     selectedData?.let {
                         vm.deleteConn(selectedData)
@@ -134,9 +146,6 @@ class ConnectionsFragment: VisibilityFragment() {
 
     override fun onVisibleExceptFirst() {
         super.onVisibleExceptFirst()
-        vm.getAllConn {
-            connAdapter?.addConn(it)
-        }
     }
 
 

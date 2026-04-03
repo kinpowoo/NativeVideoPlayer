@@ -3,6 +3,7 @@ package com.sin_tech.ble_manager.ble_tradition.server;
 
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
@@ -38,7 +39,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * 单Selector线程处理所有连接，支持心跳、文件传输
  */
 public class BlueDirectServer{
-    private final String tag = "zhangphil";
+    private final String tag = "sintechphil";
     private final String MY_UUID = "00001101-0000-1000-8000-00805F9B34FB";
     // 核心NIO组件
     private BluetoothServerSocket serverSocket;
@@ -82,7 +83,8 @@ public class BlueDirectServer{
         BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(mBluetoothAdapter != null) {
             try {
-                serverSocket = mBluetoothAdapter.listenUsingRfcommWithServiceRecord(tag, UUID.fromString(MY_UUID));
+                serverSocket = mBluetoothAdapter.listenUsingRfcommWithServiceRecord(tag,
+                        UUID.fromString(MY_UUID));
             } catch (Exception e) {
                throw new RuntimeException("create server socket error");
             }

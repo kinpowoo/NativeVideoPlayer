@@ -112,7 +112,7 @@ class ConnListAdapter(private val connSelect:(ConnInfo, Int)->Unit,
             holder.name.text = name
         }else{
             holder.name.text = String.format(
-                Locale.US,"%s:%s:%d",
+                Locale.US,"%s://%s:%d",
                 conn.protocol.lowercase(),
                 conn.domain,conn.port)
         }

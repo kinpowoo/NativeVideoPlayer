@@ -70,6 +70,7 @@ class SelectConnTypeActivity : BaseActivity() {
             val tent = Intent(this, ConnectionEditActivity::class.java)
             tent.putExtra("connType",item.identity.ordinal)
             startActivity(tent)
+            finishAfterTransition()
         }
         binding?.connTypeList?.layoutManager = GridLayoutManager(this,3)
         binding?.connTypeList?.adapter = adapter

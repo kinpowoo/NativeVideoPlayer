@@ -84,12 +84,15 @@ public class BlueDirectDiscovery extends ScanCallback {
     @SuppressLint("MissingPermission")
     public void startDiscovery() {
         //先停止搜索
-        List<ScanFilter> filters = new ArrayList<>();
+//        List<ScanFilter> filters = new ArrayList<>();
 //        filters.add(new ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(
 //                TARGET_UUID)).build());
-        mBluetoothAdapter.getBluetoothLeScanner().stopScan(this);
-        mBluetoothAdapter.getBluetoothLeScanner().startScan(filters,
-                new ScanSettings.Builder().build(),this);
+//        mBluetoothAdapter.getBluetoothLeScanner().stopScan(this);
+//        mBluetoothAdapter.getBluetoothLeScanner().startScan(filters,
+//                new ScanSettings.Builder().build(),this);
+        if(mBluetoothAdapter != null){
+            mBluetoothAdapter.startDiscovery();
+        }
         if (callback != null) {
             callback.onScanStart();
         }
@@ -101,12 +104,12 @@ public class BlueDirectDiscovery extends ScanCallback {
      */
     @SuppressLint("MissingPermission")
     public void stopDiscovery() {
-//        if(mBluetoothAdapter != null){
-//            mBluetoothAdapter.cancelDiscovery();
-//        }
         if(mBluetoothAdapter != null){
-            mBluetoothAdapter.getBluetoothLeScanner().stopScan(this);
+            mBluetoothAdapter.cancelDiscovery();
         }
+//        if(mBluetoothAdapter != null){
+//            mBluetoothAdapter.getBluetoothLeScanner().stopScan(this);
+//        }
         if(callback != null) {
             callback.onScanEnd();
         }
@@ -123,26 +126,32 @@ public class BlueDirectDiscovery extends ScanCallback {
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
 
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-
+                ParcelUuid devUUID = intent.getParcelableExtra(BluetoothDevice.EXTRA_UUID);
 //                String name = device != null ? device.getName() : null;
                 // 关键步骤：获取设备的UUID列表
                 ParcelUuid[] uuids = null;
                 if (device != null) {
+                    String deviceName = device.getName();
+                    // 2. 获取设备 MAC 地址
+                    String deviceAddress = device.getAddress();
+                    // 3. 获取设备类型
+                    int deviceType = device.getType();
+                    String typeStr = switch (deviceType) {
+                        case BluetoothDevice.DEVICE_TYPE_CLASSIC -> "经典蓝牙";
+                        case BluetoothDevice.DEVICE_TYPE_LE -> "低功耗蓝牙";
+                        case BluetoothDevice.DEVICE_TYPE_DUAL -> "双模设备";
+                        default -> "未知类型";
+                    };
                     uuids = device.getUuids();
                     // 检查UUID列表是否包含目标UUID
-                    if (uuids != null) {
-                        for (ParcelUuid uuid : uuids) {
-                            if (uuid.equals(TARGET_UUID)) {
-                                // 找到目标设备！进行后续处理（如添加到列表）
+                    if (deviceName != null && deviceName.equals("sintechphil")) {
+                        // 找到目标设备！进行后续处理（如添加到列表）
 //                                Log.d("BluetoothFilter", "找到目标设备: " + device.getName() + " - " + device.getAddress());
-                                if(callback != null){
-                                    callback.onDeviceFound(device);
-                                }
-                                // 蓝牙搜索是非常消耗系统资源开销的过程，一旦发现了目标感兴趣的设备，可以考虑关闭扫描。
-                                mBluetoothAdapter.cancelDiscovery();
-                                break;
-                            }
+                        if(callback != null){
+                            callback.onDeviceFound(device);
                         }
+                        // 蓝牙搜索是非常消耗系统资源开销的过程，一旦发现了目标感兴趣的设备，可以考虑关闭扫描。
+                        mBluetoothAdapter.cancelDiscovery();
                     }
                 }
             }

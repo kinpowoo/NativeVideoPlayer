@@ -3,10 +3,12 @@ package com.jhkj.videoplayer.pages
 import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
-import androidx.activity.viewModels
+import android.view.View
+import android.widget.Toast
 import androidx.core.widget.addTextChangedListener
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import cody.bus.ElegantBus
 import com.jhkj.videoplayer.R
 import com.jhkj.videoplayer.app.BaseActivity
 import com.jhkj.videoplayer.compose_pages.models.ConnInfo
@@ -15,6 +17,8 @@ import com.jhkj.videoplayer.utils.ImmersiveStatusBarUtils
 import com.jhkj.videoplayer.utils.LottieDialog
 import com.jhkj.videoplayer.utils.Res
 import com.jhkj.videoplayer.viewmodels.ConnInfoVm
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class ConnectionEditActivity : BaseActivity() {
@@ -22,6 +26,7 @@ class ConnectionEditActivity : BaseActivity() {
     private var connDto: ConnInfo? = null
     private var vm: ConnInfoVm? = null  // Activity 作用域
     private var dialog: LottieDialog? = null
+    var connType:Int = ConnType.WEBDAV.ordinal
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,16 +43,33 @@ class ConnectionEditActivity : BaseActivity() {
         }else{
             connDto = intent.getSerializableExtra("connInfo") as? ConnInfo
         }
-        val connType = intent.getIntExtra("connType",ConnType.WEBDAV.ordinal)
+        connType = intent.getIntExtra("connType",ConnType.WEBDAV.ordinal)
+
         if(connDto == null){
             binding?.title?.text = Res.string(R.string.add_connection)
+            if(connType == ConnType.WEBDAV.ordinal) {
+                connDto = ConnInfo(
+                    0, "",
+                    "", "", "HTTP", 80, "", "",
+                    connType
+                )
+            }else{
+                connDto = ConnInfo(
+                    0, "",
+                    "", "", "SMB", 445, "", "",
+                    connType
+                )
+            }
         }else{
             binding?.title?.text = Res.string(R.string.edit_connection)
+            connType = connDto?.connType ?: ConnType.WEBDAV.ordinal
         }
-        if(connDto == null) {
-            connDto = ConnInfo(0,"",
-                "","","HTTP",80,"","",
-                connType)
+        if(connType == ConnType.WEBDAV.ordinal) {
+            binding?.boxProtocol?.visibility = View.VISIBLE
+            binding?.tips?.visibility = View.GONE
+        }else{
+            binding?.boxProtocol?.visibility = View.GONE
+            binding?.tips?.visibility = View.VISIBLE
         }
 
         loadConnInfo()
@@ -76,13 +98,44 @@ class ConnectionEditActivity : BaseActivity() {
         val pass = connDto?.pass ?: ""
         binding?.passInput?.setText(pass)
 
-        if(!TextUtils.isEmpty(path)){
+        if(TextUtils.isEmpty(path)){
             binding?.fullNameTv?.text = String.format(Locale.US,"%s://%s:%d",
                 httpStr.lowercase(),domain,port)
         }else{
             binding?.fullNameTv?.text = String.format(Locale.US,"%s://%s:%d/%s",
                 httpStr.lowercase(),domain,port,path)
         }
+    }
+
+    private fun updateFullURL(){
+        val httpStr = connDto?.protocol ?: "HTTP"
+        val domain = connDto?.domain ?: ""
+        val path = connDto?.path ?: ""
+        val port = connDto?.port ?: 80
+        if(TextUtils.isEmpty(path)){
+            binding?.fullNameTv?.text = String.format(Locale.US,"%s://%s:%d",
+                httpStr.lowercase(),domain,port)
+        }else{
+            binding?.fullNameTv?.text = String.format(Locale.US,"%s://%s:%d%s",
+                httpStr.lowercase(),domain,port,path)
+        }
+    }
+
+
+    private fun saveValidate(): Boolean{
+        val domain = connDto?.domain ?: ""
+//        val path = connDto?.path ?: ""
+        if(TextUtils.isEmpty(domain)){
+            Toast.makeText(this,R.string.connection_info_not_valid,
+                Toast.LENGTH_SHORT).show()
+            return false
+        }
+//        if(TextUtils.isEmpty(path)){
+//            Toast.makeText(this,R.string.connection_info_not_valid,
+//                Toast.LENGTH_SHORT).show()
+//            return false
+//        }
+        return true
     }
 
     fun setListener(){
@@ -94,20 +147,29 @@ class ConnectionEditActivity : BaseActivity() {
             binding?.protocolHttp?.isChecked = true
             binding?.protocolHttps?.isChecked = false
             connDto?.protocol = "HTTP"
+            updateFullURL()
         }
         binding?.protocolHttps?.setOnClickListener {
             binding?.protocolHttp?.isChecked = false
             binding?.protocolHttps?.isChecked = true
             connDto?.protocol = "HTTPS"
+            updateFullURL()
         }
         binding?.hostInput?.addTextChangedListener {
             connDto?.domain = it?.toString() ?: ""
+            updateFullURL()
         }
         binding?.pathInput?.addTextChangedListener {
             connDto?.path = it?.toString() ?: ""
+            updateFullURL()
         }
         binding?.portInput?.addTextChangedListener {
-            connDto?.port = (it?.toString() ?: "80").toIntOrNull() ?: 80
+            if(connType == ConnType.WEBDAV.ordinal) {
+                connDto?.port = (it?.toString() ?: "80").toIntOrNull() ?: 80
+            }else{
+                connDto?.port = (it?.toString() ?: "445").toIntOrNull() ?: 445
+            }
+            updateFullURL()
         }
         binding?.usernameInput?.addTextChangedListener {
             connDto?.username = it?.toString() ?: ""
@@ -118,21 +180,34 @@ class ConnectionEditActivity : BaseActivity() {
 
         binding?.saveBtn?.setOnClickListener {
             if(isDoubleClick(it))return@setOnClickListener
-            connDto?.let {
-                vm?.insertOrUpdateConn(it){ isSuc ->
-                    handler?.runOnUi {
-                        hideKeyboard()
+            if(!saveValidate())return@setOnClickListener
+            lifecycleScope.launch(Dispatchers.IO){
+                connDto?.let {
+                    vm?.insertOrUpdateConn(it){ isSuc ->
+                        handler?.runOnUi {
+                            hideKeyboard()
 //                        dialog?.showSucRes(isSuc)
 //                        dialog?.show()
-                        if(isSuc){
-                            showToast(Res.string(R.string.save_success))
-                            finishAfterTransition()
-                        }else{
-                            showToast(Res.string(R.string.save_failed))
+                            if(isSuc){
+                                ElegantBus.getDefault("ConnUpdate").post("")
+                                showToast(Res.string(R.string.save_success))
+                                finishAfterTransition()
+                            }else{
+                                showToast(Res.string(R.string.save_failed))
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+
+
+    private fun getPort():Int{
+        if(connType == ConnType.WEBDAV.ordinal){
+            return connDto?.port ?: 80
+        }else{
+            return connDto?.port ?: 445
         }
     }
 

@@ -41,6 +41,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var glPlayer:PlayerGLSurface? = null  //播放控件
     private var controlPanel:ConstraintLayout? = null  //控制面板
 
+    private var fileNameTv: TextView? = null
     //快进快退
     private var backBtnHor:ImageView? = null
     private var forwardBox:ConstraintLayout? = null
@@ -125,6 +126,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         glPlayer = view.findViewById(R.id.gl_player)
         controlPanel = view.findViewById(R.id.control_bar)
 
+        fileNameTv = view.findViewById(R.id.file_name)
         backBtnHor = view.findViewById(R.id.back_btn_hor)
         forwardBox = view.findViewById(R.id.forward_box)
         forwardIcon = view.findViewById(R.id.direction_icon)
@@ -199,7 +201,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
             override fun playOnGoing(progress: Int, duration: Int) {
                 val nowTime = SystemClock.elapsedRealtime()
                 activity?.runOnUiThread {
-                    if(isControlPanelVisible && (nowTime - lastShowControlPanelTime > 3000L)){  //播放三秒后，隐藏控制面板
+                    if(isControlPanelVisible && (nowTime - lastShowControlPanelTime > 5000L)){  //播放三秒后，隐藏控制面板
                         dismissControlPanel()
                     }
                     val pText = genProgressText(progress, duration)
@@ -345,6 +347,10 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         val lp = activity?.window?.attributes
         lp?.alpha = alpha
         activity?.window?.attributes = lp
+    }
+
+    fun setFileName(str:String){
+        fileNameTv?.text = str
     }
 
     fun loadUrl(url:String){
@@ -717,9 +723,9 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         activity?.runOnUiThread {
             if(!isControlPanelVisible){
                 val isBuffering = glPlayer?.isBuffering() ?: false
-                if(!isBuffering) {
-                    visibleControlPanel()
-                }
+//                if(!isBuffering) {
+                visibleControlPanel()
+//                }
             }else{
                 dismissControlPanel()
             }
