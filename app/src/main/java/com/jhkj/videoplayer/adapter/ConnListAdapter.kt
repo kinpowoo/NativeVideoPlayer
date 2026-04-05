@@ -108,7 +108,7 @@ class ConnListAdapter(private val connSelect:(ConnInfo, Int)->Unit,
 
     private fun setConnInfo(holder: ConnTypeHolder, conn: ConnInfo){
         val name = conn.displayName
-        if(TextUtils.isEmpty(name)) {
+        if(!TextUtils.isEmpty(name)) {
             holder.name.text = name
         }else{
             holder.name.text = String.format(

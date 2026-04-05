@@ -81,9 +81,9 @@ class RemoteFilesActivity: BaseActivity() {
             }else{
                 val sbmVm = ViewModelProvider(this)[this.javaClass.name, SmbVM::class.java]
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val client = sbmVm.initClient(conn)
+                    val isConnected = sbmVm.initClient(conn)
                     lifecycleScope.launch(Dispatchers.Main) {
-                        if (client == null) {
+                        if (!isConnected) {
                             Toast.makeText(
                                 this@RemoteFilesActivity,
                                 R.string.connection_error, Toast.LENGTH_SHORT

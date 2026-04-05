@@ -8,11 +8,16 @@ import android.widget.Toast
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import cody.bus.ElegantBus
 import com.jhkj.videoplayer.R
+import com.jhkj.videoplayer.adapter.LocalDeviceListAdapter
 import com.jhkj.videoplayer.app.BaseActivity
 import com.jhkj.videoplayer.compose_pages.models.ConnInfo
 import com.jhkj.videoplayer.databinding.EditConnLayoutBinding
+import com.jhkj.videoplayer.third_file_framework.smb.MDNSHostnameResolver
+import com.jhkj.videoplayer.third_file_framework.smb.SMBDevice
+import com.jhkj.videoplayer.third_file_framework.smb.SMBDeviceScanListener
 import com.jhkj.videoplayer.utils.ImmersiveStatusBarUtils
 import com.jhkj.videoplayer.utils.LottieDialog
 import com.jhkj.videoplayer.utils.Res
@@ -27,6 +32,9 @@ class ConnectionEditActivity : BaseActivity() {
     private var vm: ConnInfoVm? = null  // Activity 作用域
     private var dialog: LottieDialog? = null
     var connType:Int = ConnType.WEBDAV.ordinal
+    private var adapter: LocalDeviceListAdapter? = null
+
+    private var resolveHostname: MDNSHostnameResolver? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +52,25 @@ class ConnectionEditActivity : BaseActivity() {
             connDto = intent.getSerializableExtra("connInfo") as? ConnInfo
         }
         connType = intent.getIntExtra("connType",ConnType.WEBDAV.ordinal)
+        resolveHostname = MDNSHostnameResolver(this)
+        if(connDto == null && connType != ConnType.WEBDAV.ordinal){
+            resolveHostname?.startDiscovery(10000)
+            resolveHostname?.setScanListener(smbScanListener)
+
+            adapter = LocalDeviceListAdapter{ dev,idx ->
+                connDto?.connType = ConnType.NAS.ordinal
+                connDto?.port = dev.port
+                connDto?.domain = dev.ip
+                connDto?.displayName = dev.serverName
+                connDto?.path = ""
+                connDto?.protocol = "smb"
+                connDto?.username = ""
+                connDto?.pass = ""
+                loadConnInfo()
+            }
+            binding?.localDevices?.layoutManager = LinearLayoutManager(this)
+            binding?.localDevices?.adapter = adapter
+        }
 
         if(connDto == null){
             binding?.title?.text = Res.string(R.string.add_connection)
@@ -67,9 +94,11 @@ class ConnectionEditActivity : BaseActivity() {
         if(connType == ConnType.WEBDAV.ordinal) {
             binding?.boxProtocol?.visibility = View.VISIBLE
             binding?.tips?.visibility = View.GONE
+            binding?.foundTitle?.visibility = View.GONE
         }else{
             binding?.boxProtocol?.visibility = View.GONE
             binding?.tips?.visibility = View.VISIBLE
+            binding?.foundTitle?.visibility = View.VISIBLE
         }
 
         loadConnInfo()
@@ -211,7 +240,20 @@ class ConnectionEditActivity : BaseActivity() {
         }
     }
 
+    private val smbScanListener = object: SMBDeviceScanListener {
+        override fun onDeviceScanned(dev: SMBDevice) {
+            runOnUiThread {
+                adapter?.addDev(dev)
+            }
+        }
+
+        override fun onScanFailed(reason: String) {
+
+        }
+    }
+
     override fun onDestroy() {
+        resolveHostname?.stopDiscovery()
         vm?.disconnect()
         super.onDestroy()
     }

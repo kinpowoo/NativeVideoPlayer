@@ -7,4 +7,12 @@
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <application>
+        <provider
+            android:name=".data_source_imp.SMBContentProvider"
+            android:authorities="com.jhkj.videoplayer.smbProvider"
+            android:exported="false" />
+    </application>
+
 </manifest>

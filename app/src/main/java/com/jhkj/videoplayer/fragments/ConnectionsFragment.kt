@@ -19,10 +19,14 @@ import com.jhkj.videoplayer.components.LoadingDialog
 import com.jhkj.videoplayer.components.RecyclerViewWithContextMenu.RecyclerViewContextInfo
 import com.jhkj.videoplayer.compose_pages.models.ConnInfo
 import com.jhkj.videoplayer.databinding.ConnFragmentLayoutBinding
-import com.jhkj.videoplayer.pages.ConnType
 import com.jhkj.videoplayer.pages.ConnectionEditActivity
 import com.jhkj.videoplayer.pages.RemoteFilesActivity
 import com.jhkj.videoplayer.pages.SelectConnTypeActivity
+import com.jhkj.videoplayer.third_file_framework.smb.DeviceFinder
+import com.jhkj.videoplayer.third_file_framework.smb.DeviceItem
+import com.jhkj.videoplayer.third_file_framework.smb.JcifsNgScanner
+import com.jhkj.videoplayer.third_file_framework.smb.MDNSHostnameResolver
+import com.jhkj.videoplayer.third_file_framework.smb.OnDeviceFoundListener
 import com.jhkj.videoplayer.utils.RemoteConnTest
 import com.jhkj.videoplayer.utils.Res
 import com.jhkj.videoplayer.viewmodels.ConnInfoVm
@@ -83,6 +87,7 @@ class ConnectionsFragment: VisibilityFragment() {
             // 为 RecyclerView 注册上下文菜单
             registerForContextMenu(it)
         }
+
         binding?.addConn?.setOnClickListener {
             if(isDoubleClick(it))return@setOnClickListener
             startActivity(Intent(activity, SelectConnTypeActivity::class.java))
@@ -146,6 +151,7 @@ class ConnectionsFragment: VisibilityFragment() {
 
     override fun onVisibleExceptFirst() {
         super.onVisibleExceptFirst()
+
     }
 
 

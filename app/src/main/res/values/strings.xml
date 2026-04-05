@@ -22,6 +22,7 @@
     <string name="username">Username:</string>
     <string name="password">Password:</string>
     <string name="edit_conn_tips">If you want access lan network shared folder,use \"domain\\username\" or \"username@domain\" format as username</string>
+    <string name="scan_device_title">Founded Local Devices:</string>
 
     <string name="save_success">Saved!</string>
     <string name="save_failed">Save Failed!</string>

@@ -6,11 +6,14 @@ import com.hierynomus.msfscc.FileAttributes
 import com.hierynomus.msfscc.fileinformation.FileIdBothDirectoryInformation
 import com.jhkj.videoplayer.compose_pages.models.ConnInfo
 import com.jhkj.videoplayer.third_file_framework.smb.BySMB
+import com.jhkj.videoplayer.third_file_framework.smb.JcifsNgScanner
 import com.jhkj.videoplayer.third_file_framework.smb.OnListFileCallback
 import com.jhkj.videoplayer.third_file_framework.smb.OnReadFileListNameCallback
+import com.jhkj.videoplayer.third_file_framework.smb.SMBShare
 import com.jhkj.videoplayer.utils.FileMimeType
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import com.thegrizzlylabs.sardineandroid.DavResource
+import jcifs.smb.SmbFile
 import java.io.IOException
 
 
@@ -23,21 +26,10 @@ class SmbVM: ViewModel(), RemoteProvider{
         return "$protocol://$host:$port"
     }
 
-    private var client: BySMB? = null
-
-    fun initClient(conn: ConnInfo):BySMB?{
-//        val url = getFullUrl(conn)
-        client = BySMB.with()
-            .setConfig(
-                ip = conn.domain,         // 电脑IP地址
-                username = conn.username,           // 电脑用户名
-                password = conn.pass,          // 电脑密码
-                folderName = (conn.path ?: "")   // 共享文件夹名称
-            )
-            .setReadTimeOut(5)               // 读取超时(秒)
-            .setSoTimeOut(10)                // Socket超时(秒)
-            .build()
-        return client
+    private lateinit var ngScanner: JcifsNgScanner
+    fun initClient(conn: ConnInfo): Boolean{
+        ngScanner = JcifsNgScanner()
+        return checkUrl(conn)
     }
 
 
@@ -53,55 +45,53 @@ class SmbVM: ViewModel(), RemoteProvider{
     }
 
     override fun checkUrl(conn: ConnInfo): Boolean {
-        return false
+        val fileList = ngScanner.listFiles(conn,conn.path ?: "")
+        return fileList != null
     }
 
-    override fun listFiles(conn:ConnInfo,subpath:String):List<FileItem>?{
+    override fun listFiles(conn:ConnInfo,subpath:String):List<FileItem>{
         val baseUrl = getFullUrl(conn)
-//        val url = baseUrl + subpath
-        val fileList = client?.listShareFolderPath(subpath,null)
-        val files:List<FileIdBothDirectoryInformation>? = fileList
+        val fileList = ngScanner.listFiles(conn,subpath)
         val items = mutableListOf<FileItem>()
-        files?.forEach{
-//                    if(it.fileName != subpath) {
-//
-//                    }
-            val fileItem = convertSmbFile(baseUrl, it, conn)
-            items.add(fileItem)
+        fileList?.forEach{
+            if(!it.isHidden) {
+                val fileItem = convertSmbFile(baseUrl, it, conn)
+                items.add(fileItem)
+            }
         }
         return items
     }
 
     override fun deleteFile(conn: ConnInfo, subpath: String): Boolean {
-        val baseUrl = getFullUrl(conn)
-        val url = baseUrl + subpath
-        return client?.deleteFile(url,null) ?: false
+        return ngScanner.deleteFile(conn,subpath)
     }
 
 
-    private fun convertSmbFile(baseURL:String,file:FileIdBothDirectoryInformation,conn: ConnInfo): FileItem{
-        val isDir = isDirectory(file.fileAttributes)
-        val name = file.fileName
+    private fun convertSmbFile(baseURL:String, file: SmbFile, conn: ConnInfo): FileItem{
+        val isDir = file.isDirectory
+        val name = file.name
         val lastDotIdx = name.lastIndexOf(".")
         var subname = if(lastDotIdx > 0) {
-            file.fileName.substring(0, lastDotIdx)
+            file.name.substring(0, lastDotIdx)
         }else{
             ""
         }
-        val isHidden = (TextUtils.isEmpty(subname) && name.startsWith("."))
         if(TextUtils.isEmpty(subname)){
             subname = name
         }
         val suffix = name.split(subname).lastOrNull() ?: ""
         val mimeType = FileMimeType.getFileType(name)
-        val fileItem = FileItem(isDir,file.fileName,
+        val fileItem = FileItem(isDir,file.name,
             subname,mimeType,
-            file.creationTime.toEpochMillis(),
-            file.changeTime.toEpochMillis(),
-            file.endOfFile,0,"",
-            baseURL+file.fileName,
-            "",isHidden,
-            true, true,conn.username,conn.pass)
+            file.lastModified,
+            file.createTime(),
+            file.length(),0,
+            "",
+            (file.parent ?: "") + file.name,
+            file.parent,
+            file.isHidden,
+            file.canWrite(), file.canRead(),
+            conn.username,conn.pass)
         return fileItem
     }
 

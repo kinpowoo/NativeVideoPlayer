@@ -8,7 +8,11 @@ import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.net.Uri
-import android.opengl.*
+import android.opengl.GLES11Ext
+import android.opengl.GLES20
+import android.opengl.GLES30
+import android.opengl.GLSurfaceView
+import android.opengl.Matrix
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -16,19 +20,28 @@ import android.text.TextUtils
 import android.util.Base64
 import android.util.Log
 import android.view.Surface
+import androidx.core.net.toUri
+import com.jhkj.gl_player.data_source_imp.BufferedSMBDS2
+import com.jhkj.gl_player.data_source_imp.BufferedSMBDataSource
+import com.jhkj.gl_player.data_source_imp.SMBDataSource
 import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.gl_player.util.GLDataUtil
 import com.jhkj.gl_player.util.ResReadUtils
 import com.jhkj.gl_player.util.ShaderUtils
+import jcifs.CIFSContext
+import jcifs.context.SingletonContext
+import jcifs.smb.NtlmPasswordAuthenticator
+import jcifs.smb.NtlmPasswordAuthenticator.AuthenticationType
+import jcifs.smb.SmbException
+import jcifs.smb.SmbFile
+import jcifs.smb.SmbFileInputStream
+import jcifs.smb.SmbRandomAccessFile
 import java.io.IOException
-import java.lang.Exception
-import java.lang.IllegalArgumentException
 import java.nio.FloatBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.max
 import kotlin.math.min
-import androidx.core.net.toUri
 
 /**
  * 创建日期：6/23/21 7:08 AM
@@ -274,13 +287,55 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
                 mPlayer.setDataSource(mContext!!,playUri!!)
             }
             webdavResource?.let { conn ->
-                val url = conn.path.toUri()
-                // Base64 编码认证信息
-                val credentials = conn.user + ":" + conn.pass
-                val auth = "Basic " + Base64.encodeToString(credentials.toByteArray(),
-                    Base64.NO_WRAP)
-                val headers =  mapOf("Authorization" to auth)
-                mPlayer.setDataSource(mContext!!,url,headers)
+                if(conn.path.startsWith("http")) {
+                    val url = conn.path.toUri()
+                    // Base64 编码认证信息
+                    val credentials = conn.user + ":" + conn.pass
+                    val auth = "Basic " + Base64.encodeToString(
+                        credentials.toByteArray(),
+                        Base64.NO_WRAP
+                    )
+                    val headers = mapOf("Authorization" to auth)
+                    mPlayer.setDataSource(mContext!!, url, headers)
+                }else if(conn.path.startsWith("smb")){
+                    val smbUrl = conn.path
+                    // 1. 创建SmbFile对象
+                    try {
+                        // 创建Uri
+//                        val uri = "content://com.jhkj.videoplayer.smbProvider/file".toUri()
+//                            .buildUpon()
+//                            .appendQueryParameter("url", smbUrl)
+//                            .appendQueryParameter("username",conn.user)
+//                            .appendQueryParameter("password",conn.pass)
+//                            .build()
+//                        mPlayer.setDataSource(mContext!!, uri)
+
+                        //  2. 获取文件输入流
+                        val username = conn.user
+                        val context: CIFSContext = if (!TextUtils.isEmpty(username)) {
+                            // 如果域为空，可以传入空字符串
+                            val auth = NtlmPasswordAuthenticator(
+                                null,
+                                username, conn.pass,
+                                AuthenticationType.USER
+                            )
+                            SingletonContext.getInstance().withCredentials(auth)
+                        } else {
+                            SingletonContext.getInstance().withGuestCrendentials()
+                        }
+                        val smbFile = SmbFile(smbUrl,context)
+                        val randomSmbFile = SmbRandomAccessFile(smbFile, "r")
+                        // 2. 获取文件输入流
+//                        val smbDataSource = BufferedSMBDS2(randomSmbFile, smbFile.length())
+                        val smbDataSource = BufferedSMBDataSource(randomSmbFile, smbFile.length())
+                        // 3. 关键步骤：将文件描述符（FD）设置为MediaPlayer的数据源
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            mPlayer.setDataSource(smbDataSource)
+                        }
+                    }catch (e: SmbException){
+                        e.printStackTrace()
+                    }
+                }
             }
             bufferingListener?.bufferingStart()
             isBuffering = true
