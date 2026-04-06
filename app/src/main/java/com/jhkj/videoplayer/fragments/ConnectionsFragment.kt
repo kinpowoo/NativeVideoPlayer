@@ -22,11 +22,6 @@ import com.jhkj.videoplayer.databinding.ConnFragmentLayoutBinding
 import com.jhkj.videoplayer.pages.ConnectionEditActivity
 import com.jhkj.videoplayer.pages.RemoteFilesActivity
 import com.jhkj.videoplayer.pages.SelectConnTypeActivity
-import com.jhkj.videoplayer.third_file_framework.smb.DeviceFinder
-import com.jhkj.videoplayer.third_file_framework.smb.DeviceItem
-import com.jhkj.videoplayer.third_file_framework.smb.JcifsNgScanner
-import com.jhkj.videoplayer.third_file_framework.smb.MDNSHostnameResolver
-import com.jhkj.videoplayer.third_file_framework.smb.OnDeviceFoundListener
 import com.jhkj.videoplayer.utils.RemoteConnTest
 import com.jhkj.videoplayer.utils.Res
 import com.jhkj.videoplayer.viewmodels.ConnInfoVm

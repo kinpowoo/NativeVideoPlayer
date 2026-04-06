@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.jhkj.videoplayer.databinding.LocalDeviceItemLayoutBinding
-import com.jhkj.videoplayer.third_file_framework.smb.SMBDevice
+import com.jhkj.videoplayer.third_file_framework.smb_client.SMBDevice
 import java.util.Locale
 
 class LocalDeviceListAdapter(private val devSelect:(SMBDevice, Int)->Unit):

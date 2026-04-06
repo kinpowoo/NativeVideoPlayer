@@ -19,6 +19,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
@@ -149,10 +150,16 @@ class VideoPlayerActivity : AppCompatActivity(){
             }
             if(fileInfo != null){
                 playerFragment?.setFileName(fileInfo.fileName)
-                val webResFile = WebResourceFile(fileInfo.path,
-                    fileInfo.credentialUser ?: "",fileInfo.credentialPass ?: "")
-                lifecycleScope.launch(Dispatchers.IO) {
-                    playerFragment?.loadWebResource( webResFile)
+                if(fileInfo.fileType == 0){
+                    playerFragment?.loadUri(fileInfo.path.toUri())
+                }else {
+                    val webResFile = WebResourceFile(
+                        fileInfo.path,
+                        fileInfo.credentialUser ?: "", fileInfo.credentialPass ?: ""
+                    )
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        playerFragment?.loadWebResource(webResFile)
+                    }
                 }
                 binding.pickVideo.visibility = View.GONE
             }

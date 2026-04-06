@@ -127,6 +127,8 @@
             app:layout_constraintEnd_toStartOf="@+id/backward_30"
             android:textSize="14sp"
             android:singleLine="false"
+            android:maxLines="2"
+            android:ellipsize="marquee"
             android:fontFamily="sans-serif"
             android:textColor="@android:color/white"
             android:layout_marginTop="5dp"

@@ -76,7 +76,7 @@ class ConnInfoVm(application: Application) : AndroidViewModel(application){
 
     fun disconnect(){
         try {
-            db.close()
+//            db.close()
         }catch (e: Exception){
             e.printStackTrace()
         }

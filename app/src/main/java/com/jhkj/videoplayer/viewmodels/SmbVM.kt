@@ -3,18 +3,11 @@ package com.jhkj.videoplayer.viewmodels
 import android.text.TextUtils
 import androidx.lifecycle.ViewModel
 import com.hierynomus.msfscc.FileAttributes
-import com.hierynomus.msfscc.fileinformation.FileIdBothDirectoryInformation
 import com.jhkj.videoplayer.compose_pages.models.ConnInfo
-import com.jhkj.videoplayer.third_file_framework.smb.BySMB
-import com.jhkj.videoplayer.third_file_framework.smb.JcifsNgScanner
-import com.jhkj.videoplayer.third_file_framework.smb.OnListFileCallback
-import com.jhkj.videoplayer.third_file_framework.smb.OnReadFileListNameCallback
-import com.jhkj.videoplayer.third_file_framework.smb.SMBShare
+import com.jhkj.videoplayer.third_file_framework.smb_client.JcifsNgScanner
 import com.jhkj.videoplayer.utils.FileMimeType
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
-import com.thegrizzlylabs.sardineandroid.DavResource
 import jcifs.smb.SmbFile
-import java.io.IOException
 
 
 class SmbVM: ViewModel(), RemoteProvider{
@@ -91,7 +84,7 @@ class SmbVM: ViewModel(), RemoteProvider{
             file.parent,
             file.isHidden,
             file.canWrite(), file.canRead(),
-            conn.username,conn.pass)
+            conn.username,conn.pass,2)
         return fileItem
     }
 

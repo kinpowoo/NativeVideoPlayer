@@ -21,9 +21,8 @@ import android.util.Base64
 import android.util.Log
 import android.view.Surface
 import androidx.core.net.toUri
-import com.jhkj.gl_player.data_source_imp.BufferedSMBDS2
 import com.jhkj.gl_player.data_source_imp.BufferedSMBDataSource
-import com.jhkj.gl_player.data_source_imp.SMBDataSource
+import com.jhkj.gl_player.data_source_imp.BufferedSMBDataSource2
 import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.gl_player.util.GLDataUtil
 import com.jhkj.gl_player.util.ResReadUtils
@@ -31,10 +30,8 @@ import com.jhkj.gl_player.util.ShaderUtils
 import jcifs.CIFSContext
 import jcifs.context.SingletonContext
 import jcifs.smb.NtlmPasswordAuthenticator
-import jcifs.smb.NtlmPasswordAuthenticator.AuthenticationType
 import jcifs.smb.SmbException
 import jcifs.smb.SmbFile
-import jcifs.smb.SmbFileInputStream
 import jcifs.smb.SmbRandomAccessFile
 import java.io.IOException
 import java.nio.FloatBuffer
@@ -102,6 +99,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
     private var mTexRotateMatrixHandle = 0
     // 旋转矩阵
     private val rotateOriMatrix = FloatArray(16)
+    private var lastSeekTo = -1f
 
     fun setBufferingListener(listener: BufferingListener){
         this.bufferingListener = listener
@@ -153,6 +151,10 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
             isBuffering = false
             playStateListener?.playStarted(vProgressTime,vDuration)
             isMediaPlaying = true
+            if(lastSeekTo != -1f){
+                seekTo(lastSeekTo)
+                lastSeekTo = -1f
+            }
         }
         mPlayer.setOnCompletionListener {
             isMediaPlaying = false
@@ -317,13 +319,13 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
                             val auth = NtlmPasswordAuthenticator(
                                 null,
                                 username, conn.pass,
-                                AuthenticationType.USER
+                                NtlmPasswordAuthenticator.AuthenticationType.USER
                             )
                             SingletonContext.getInstance().withCredentials(auth)
                         } else {
                             SingletonContext.getInstance().withGuestCrendentials()
                         }
-                        val smbFile = SmbFile(smbUrl,context)
+                        val smbFile = SmbFile(smbUrl, context)
                         val randomSmbFile = SmbRandomAccessFile(smbFile, "r")
                         // 2. 获取文件输入流
 //                        val smbDataSource = BufferedSMBDS2(randomSmbFile, smbFile.length())
@@ -464,26 +466,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         if(isReleased)return
         if(!isMediaPrepared){
             startPlay()
-            mHandler.postDelayed({
-                try {
-                    bufferingListener?.bufferingStart()
-                    isBuffering = true
-                    val duration = mPlayer.duration  //获取时间的毫秒数
-                    val pos = (duration * percent).toInt()
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        mPlayer.seekTo(pos.toLong(), MediaPlayer.SEEK_CLOSEST)
-                    } else {
-                        mPlayer.seekTo(pos)
-                    }
-                    resumePlay()
-                } catch (e: IllegalStateException) {
-                    isBuffering = false
-                    e.printStackTrace()
-                } catch (e2: IllegalArgumentException) {
-                    isBuffering = false
-                    e2.printStackTrace()
-                }
-            },500)
+            lastSeekTo = percent
         }else {
             try {
                 bufferingListener?.bufferingStart()

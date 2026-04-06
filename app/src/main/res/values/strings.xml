@@ -21,6 +21,8 @@
     <string name="connect_as">Connect As</string>
     <string name="username">Username:</string>
     <string name="password">Password:</string>
+    <string name="username_no_comm">Username</string>
+    <string name="password_no_comm">Password</string>
     <string name="edit_conn_tips">If you want access lan network shared folder,use \"domain\\username\" or \"username@domain\" format as username</string>
     <string name="scan_device_title">Founded Local Devices:</string>
 
@@ -44,5 +46,32 @@
     <string name="connection_error">Connect error occur!</string>
 
     <string name="ble">Blue Tool</string>
-    <string name="wifi_direct">WiFi Transfer</string>
+    <string name="wifi_direct">WiFi</string>
+    <string name="file_server">File Server</string>
+
+    <string name="access_from_internal">Access For Internet</string>
+    <string name="random_password">Random generate password</string>
+    <string name="start_server_tips">Start server for other device to access files on this device</string>
+    <string name="start_server">Start</string>
+    <string name="stop_server">Stop Server</string>
+    <string name="access_from_smb_client">You can access the server from sbm client now</string>
+    <string name="access_from_ftp_client">You can access the server from ftp client now</string>
+    <string name="smb_server">Smb Server</string>
+    <string name="ftp_server">FTP Server</string>
+
+    <string name="dns_name">SambaDroid</string>
+    <string name="button_start_server">Start server</string>
+    <string name="button_stop_server">Stop server</string>
+    <string name="notification_channel_name">SMB Server</string>
+    <string name="notification_channel_description">SMB server service notification</string>
+    <string name="message_server_running">The SMB server is running.</string>
+    <string name="message_server_waiting_network">Waiting for local network connection…</string>
+    <string name="notification_action_stop">Stop server</string>
+    <string name="toast_need_storage_permission">Storage permission required</string>
+    <string name="toast_error_starting_server">Error starting server</string>
+    <string name="toast_error_no_network">Please connect to a local network to start the server.</string>
+    <string name="shortcut_start_server_short">Start</string>
+    <string name="shortcut_start_server_long">Start server</string>
+    <string name="status_server_off">The SMB server is not active.</string>
+    <string name="status_server_running">The SMB server is running.\nTo access your files, visit <b>%1$s</b>, <b>%2$s</b> or <b>%3$s</b>.</string>
 </resources>

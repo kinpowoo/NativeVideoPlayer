@@ -34,13 +34,14 @@ import java.lang.ref.WeakReference
 import java.util.Locale
 import java.util.Timer
 import java.util.TimerTask
+import java.util.concurrent.Executors
 import kotlin.math.abs
 
 
 class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var glPlayer:PlayerGLSurface? = null  //播放控件
     private var controlPanel:ConstraintLayout? = null  //控制面板
-
+    private val executors = Executors.newFixedThreadPool(2)
     private var fileNameTv: TextView? = null
     //快进快退
     private var backBtnHor:ImageView? = null
@@ -53,7 +54,6 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
     private var brightnessIcon:ImageView? = null
     private var brightnessText:TextView? = null
     private var brightnessSlider:SeekBar? = null
-
 
     private var loadingView: ProgressBar? = null
     private var seekBar:SeekBar? = null
@@ -254,12 +254,16 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
 
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                glPlayer?.pausePlay()
+                executors.execute {
+                    glPlayer?.pausePlay()
+                }
             }
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 val progress = seekBar?.progress ?: 0
                 val percent = progress / 100f
-                glPlayer?.seekTo(percent)
+                executors.execute {
+                    glPlayer?.seekTo(percent)
+                }
             }
         })
 

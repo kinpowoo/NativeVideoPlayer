@@ -8,15 +8,28 @@ import android.os.Build
 import android.util.Log
 import com.jhkj.gl_player.AppCore
 import com.jhkj.videoplayer.compose_pages.room_dto.AppDatabase
-import com.jhkj.videoplayer.third_file_framework.smb.BySMB
+import com.jhkj.videoplayer.third_file_framework.smb_client.BySMB
 import com.jhkj.videoplayer.utils.multi_lan.TextResManager
 import com.tencent.mmkv.MMKV
+import com.topjohnwu.superuser.Shell
 import jcifs.context.SingletonContext
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import java.security.Security
 import java.util.Properties
 
 
 class MainApplication : Application() {
     companion object{
+
+        init {
+            // Override Android's built-in BC provider with our own dependency
+            Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
+            Security.insertProviderAt( BouncyCastleProvider(), 1);
+
+            Shell.setDefaultBuilder(Shell.Builder.create()
+                .setFlags(Shell.FLAG_MOUNT_MASTER));
+
+        }
         private lateinit var instance : MainApplication
 
         fun get(): MainApplication{

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 获得焦点时显示蓝色下划线 -->
+    <item android:state_focused="true" android:drawable="@drawable/edit_bg_focused" />
+
+    <!-- 默认状态（无焦点）显示灰色下划线 -->
+    <item android:drawable="@drawable/edit_bg_normal" />
+</selector>

@@ -15,9 +15,9 @@ import com.jhkj.videoplayer.adapter.LocalDeviceListAdapter
 import com.jhkj.videoplayer.app.BaseActivity
 import com.jhkj.videoplayer.compose_pages.models.ConnInfo
 import com.jhkj.videoplayer.databinding.EditConnLayoutBinding
-import com.jhkj.videoplayer.third_file_framework.smb.MDNSHostnameResolver
-import com.jhkj.videoplayer.third_file_framework.smb.SMBDevice
-import com.jhkj.videoplayer.third_file_framework.smb.SMBDeviceScanListener
+import com.jhkj.videoplayer.third_file_framework.smb_client.MDNSHostnameResolver
+import com.jhkj.videoplayer.third_file_framework.smb_client.SMBDevice
+import com.jhkj.videoplayer.third_file_framework.smb_client.SMBDeviceScanListener
 import com.jhkj.videoplayer.utils.ImmersiveStatusBarUtils
 import com.jhkj.videoplayer.utils.LottieDialog
 import com.jhkj.videoplayer.utils.Res

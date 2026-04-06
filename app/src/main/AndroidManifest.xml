@@ -5,7 +5,17 @@
     <!-- 获取读写外置存储权限 -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="AllFilesAccessPolicy,ScopedStorage" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"
+        tools:ignore="ForegroundServicesPolicy" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -53,6 +63,49 @@
             android:configChanges="orientation|screenSize|layoutDirection|locale|uiMode|colorMode"
             android:windowSoftInputMode="adjustPan|stateHidden"
             tools:ignore="LockedOrientationActivity"/>
+
+        <activity
+            android:name=".third_file_framework.SelectFileServerType"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|screenSize|layoutDirection|locale|uiMode|colorMode"
+            android:windowSoftInputMode="adjustPan|stateHidden"
+            tools:ignore="LockedOrientationActivity"/>
+
+
+        <activity
+            android:name=".third_file_framework.smb_server.SmbServerActivity"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|screenSize|layoutDirection|locale|uiMode|colorMode"
+            android:windowSoftInputMode="adjustPan|stateHidden"
+            android:exported="true"
+            android:launchMode="singleTop"/>
+        <activity
+            android:name=".third_file_framework.ftp_server.FtpServerActivity"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|screenSize|layoutDirection|locale|uiMode|colorMode"
+            android:windowSoftInputMode="adjustPan|stateHidden"
+            android:exported="true"
+            android:launchMode="singleTop"/>
+
+
+        <activity
+            android:name=".third_file_framework.smb_server.IntentReceiverActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:relinquishTaskIdentity="true"
+            android:taskAffinity=""
+            android:exported="true"
+            android:excludeFromRecents="true" />
+
+        <service
+            android:name=".third_file_framework.smb_server.service.SmbService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+        <!-- 前台服务 -->
+        <service
+            android:name=".third_file_framework.ftp_server.FsService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <activity
             android:name=".player.VideoPlayerActivity"

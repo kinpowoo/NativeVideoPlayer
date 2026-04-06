@@ -132,7 +132,8 @@ class WebdavViewModel : ViewModel(), RemoteProvider{
             file.contentLength,0,"",
             baseURL+file.path,
             "",isHidden,
-            true, true,conn.username,conn.pass)
+            true, true,
+            conn.username,conn.pass,1)
         return fileItem
     }
 

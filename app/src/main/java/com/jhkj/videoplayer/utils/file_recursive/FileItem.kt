@@ -19,4 +19,5 @@ data class FileItem(
     var isReadable: Boolean,
     var credentialUser:String?,
     var credentialPass:String?,
+    var fileType:Int  // 0是本地文件，1是webdav文，2是smb文件
 ) : Serializable

@@ -38,6 +38,12 @@ android {
     buildFeatures {
         viewBinding true
     }
+
+    packagingOptions {
+        resources {
+            pickFirsts += ['META-INF/AL2.0','META-INF/LGPL2.1']
+        }
+    }
 }
 
 dependencies {
@@ -118,4 +124,21 @@ dependencies {
     implementation 'com.hierynomus:smbj:0.14.0'
 
     implementation 'eu.agno3.jcifs:jcifs-ng:2.1.10'
+
+    implementation(libs.libsu.core)
+    implementation(libs.jfileserver) {
+        // Hazlecast is only needed for clustering and not compatible with Android anyway
+        exclude(group :"com.hazelcast", module:"hazelcast")
+        // We specify our own explicit Bouncy Castle dependency
+        exclude(group :"org.bouncycastle", module:"bcprov-jdk15on")
+    }
+//    implementation(libs.bouncycastle.bcprov){
+//        exclude(group :"org.bouncycastle", module:"bcprov-jdk18on")
+//    }
+
+    implementation(libs.jmdns)
+    implementation(libs.slf4j.provider)
+
+    implementation(libs.apache.commons.lang)
+    implementation(libs.guava)
 }
