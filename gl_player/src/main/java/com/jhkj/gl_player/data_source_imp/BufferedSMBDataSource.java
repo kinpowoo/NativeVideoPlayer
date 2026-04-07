@@ -13,13 +13,13 @@ import jcifs.smb.SmbRandomAccessFile;
 
 @SuppressLint("NewApi")
 public class BufferedSMBDataSource extends MediaDataSource {
-    private static final int BUFFER_SIZE = 600 * 1024; // 1024KB缓冲块
-    private static final int NUM_BUFFERS = 20; // 缓冲块数量
-    private static final int PRELOAD_AHEAD = 4; // 预读块数
+    private static final int BUFFER_SIZE = 400 * 1024; // 1024KB缓冲块
+    private static final int NUM_BUFFERS = 40; // 缓冲块数量
+    private static final int PRELOAD_AHEAD = 20; // 预读块数
 
     private final SmbRandomAccessFile mFile;
     private final long mFileSize;
-    private final ExecutorService mExecutor = Executors.newFixedThreadPool(2);
+    private final ExecutorService mExecutor = Executors.newFixedThreadPool(8);
     private final BufferBlock[] mBuffers = new BufferBlock[NUM_BUFFERS];
     private int mCurrentBufferIndex = 0;
 
