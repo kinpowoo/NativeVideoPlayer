@@ -43,7 +43,7 @@ class JcifsNgScanner {
             val username = conn.username
             val pass = conn.pass
             val context = if(TextUtils.isEmpty(username)){
-                SingletonContext.getInstance().withGuestCrendentials()
+                SingletonContext.getInstance().withDefaultCredentials()
             }else{
                 val auth = NtlmPasswordAuthenticator(null, username, pass,
                     AuthenticationType.USER)
@@ -51,7 +51,11 @@ class JcifsNgScanner {
             }
             // 3. 连接到主机根目录
             val host = conn.domain
-            val smbUrl = "smb://$host/$subpath"
+            val smbUrl = if(!TextUtils.isEmpty(subpath)){
+                "smb://$host/$subpath"
+            }else{
+                "smb://$host/"
+            }
             val rootDir = SmbFile(smbUrl, context)
             // 4. 列出所有共享文件夹
             val files:Array<SmbFile> = rootDir.listFiles()

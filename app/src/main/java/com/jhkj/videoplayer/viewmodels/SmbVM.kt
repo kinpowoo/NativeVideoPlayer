@@ -7,6 +7,7 @@ import com.jhkj.videoplayer.compose_pages.models.ConnInfo
 import com.jhkj.videoplayer.third_file_framework.smb_client.JcifsNgScanner
 import com.jhkj.videoplayer.utils.FileMimeType
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
+import jcifs.smb.SmbException
 import jcifs.smb.SmbFile
 
 
@@ -48,8 +49,13 @@ class SmbVM: ViewModel(), RemoteProvider{
         val items = mutableListOf<FileItem>()
         fileList?.forEach{
             if(!it.isHidden) {
-                val fileItem = convertSmbFile(baseUrl, it, conn)
-                items.add(fileItem)
+                try {
+                    val fileName = it.name
+                    val fileItem = convertSmbFile(fileName, it, conn)
+                    items.add(fileItem)
+                }catch (e: SmbException){
+                    e.printStackTrace()
+                }
             }
         }
         return items
@@ -60,12 +66,12 @@ class SmbVM: ViewModel(), RemoteProvider{
     }
 
 
-    private fun convertSmbFile(baseURL:String, file: SmbFile, conn: ConnInfo): FileItem{
+    private fun convertSmbFile(fileName:String, file: SmbFile, conn: ConnInfo): FileItem{
         val isDir = file.isDirectory
-        val name = file.name
+        val name = fileName
         val lastDotIdx = name.lastIndexOf(".")
         var subname = if(lastDotIdx > 0) {
-            file.name.substring(0, lastDotIdx)
+            name.substring(0, lastDotIdx)
         }else{
             ""
         }
@@ -74,13 +80,13 @@ class SmbVM: ViewModel(), RemoteProvider{
         }
         val suffix = name.split(subname).lastOrNull() ?: ""
         val mimeType = FileMimeType.getFileType(name)
-        val fileItem = FileItem(isDir,file.name,
+        val fileItem = FileItem(isDir,name,
             subname,mimeType,
             file.lastModified,
             file.createTime(),
             file.length(),0,
             "",
-            (file.parent ?: "") + file.name,
+            (file.parent ?: "") + name,
             file.parent,
             file.isHidden,
             file.canWrite(), file.canRead(),

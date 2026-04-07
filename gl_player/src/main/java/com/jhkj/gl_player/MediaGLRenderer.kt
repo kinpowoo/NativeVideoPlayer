@@ -21,10 +21,10 @@ import android.util.Base64
 import android.util.Log
 import android.view.Surface
 import androidx.core.net.toUri
-import com.jhkj.gl_player.data_source_imp.BufferedSMBDataSource
-import com.jhkj.gl_player.data_source_imp.BufferedSMBDataSource2
+import com.jhkj.gl_player.data_source_imp.SMBDataSourceRaf
 import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.gl_player.util.GLDataUtil
+import com.jhkj.gl_player.util.MD5
 import com.jhkj.gl_player.util.ResReadUtils
 import com.jhkj.gl_player.util.ShaderUtils
 import jcifs.CIFSContext
@@ -33,6 +33,7 @@ import jcifs.smb.NtlmPasswordAuthenticator
 import jcifs.smb.SmbException
 import jcifs.smb.SmbFile
 import jcifs.smb.SmbRandomAccessFile
+import java.io.File
 import java.io.IOException
 import java.nio.FloatBuffer
 import javax.microedition.khronos.egl.EGLConfig
@@ -328,8 +329,9 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
                         val smbFile = SmbFile(smbUrl, context)
                         val randomSmbFile = SmbRandomAccessFile(smbFile, "r")
                         // 2. 获取文件输入流
-//                        val smbDataSource = BufferedSMBDS2(randomSmbFile, smbFile.length())
-                        val smbDataSource = BufferedSMBDataSource(randomSmbFile, smbFile.length())
+//                        val smbDataSource = BufferedSMBDataSource(randomSmbFile, smbFile.length())
+                        val cacheFile = getCacheFile(conn.path)
+                        val smbDataSource = SMBDataSourceRaf(cacheFile,randomSmbFile, smbFile.length())
                         // 3. 关键步骤：将文件描述符（FD）设置为MediaPlayer的数据源
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                             mPlayer.setDataSource(smbDataSource)
@@ -347,6 +349,26 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
             playStateListener?.playError()
             Log.e(TAG, "MediaPlayer prepare: $e")
         }
+    }
+
+    fun getCacheFile(path: String): File {
+        val cacheDir = mContext!!.externalCacheDir
+        val fileName = "${MD5.md5(path)}.tmp"
+        val cacheFile = File(cacheDir, fileName)
+
+        // 先检查是否是目录
+        if (cacheFile.exists() && cacheFile.isDirectory) {
+            Log.e("Cache", "存在同名目录，正在删除: ${cacheFile.absolutePath}")
+            // 删除目录及其内容
+            cacheFile.deleteRecursively()
+        }
+
+        // 确保父目录存在
+        if (!(cacheDir?.exists() ?: false)) {
+            cacheDir?.mkdirs()
+        }
+
+        return cacheFile
     }
 
     fun pausePlay(){
