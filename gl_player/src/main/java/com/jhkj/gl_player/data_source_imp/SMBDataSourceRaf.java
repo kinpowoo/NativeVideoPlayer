@@ -47,7 +47,7 @@ public class SMBDataSourceRaf extends MediaDataSource {
         }
         try {
             tmpFileReader = new RandomAccessFile(cacheFile,"r");
-            tmpFileWriter = new RandomAccessFile(cacheFile,"rw");
+            tmpFileWriter = new RandomAccessFile(cacheFile,"w");
             writeChannel = tmpFileReader.getChannel();
             writeThread = new Thread(this::writeUnder);
             writeThread.start();

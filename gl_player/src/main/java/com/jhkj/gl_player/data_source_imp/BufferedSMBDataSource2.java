@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.media.MediaDataSource;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -14,38 +13,18 @@ import jcifs.smb.SmbRandomAccessFile;
 
 @SuppressLint("NewApi")
 public class BufferedSMBDataSource2 extends MediaDataSource {
-    static final int BUFFER_SIZE = 600 * 1024; // 1024KB缓冲块
-    private static final int NUM_BUFFERS = 32; // 缓冲块数量
-    private static final int PRELOAD_AHEAD = 10; // 预读块数
+    private static final int BUFFER_SIZE = 500 * 1024; // 1024KB缓冲块
+    private static final int NUM_BUFFERS = 20; // 缓冲块数量
+    private static final int PRELOAD_AHEAD = 4; // 预读块数
 
     private final SmbRandomAccessFile mFile;
     private final long mFileSize;
-    private final ExecutorService mExecutor = Executors.newFixedThreadPool(2);
-    private int mCurrentBufferIndex = 0;
+    private final ExecutorService mExecutor = Executors.newFixedThreadPool(PRELOAD_AHEAD);
     private final BufferBlock[] mBuffers = new BufferBlock[NUM_BUFFERS];
+    private int mCurrentBufferIndex = 0;
 
-    // 读取统计
-    private long mTotalBytesRead = 0;
-    private long mCacheHits = 0;
-    private long mCacheMisses = 0;
     private final AtomicBoolean mClosed = new AtomicBoolean(false);
     private Future<?> mPreloadTask;
-
-    public static class BufferBlock {
-        long startPos = 0;
-        ByteBuffer data;
-        int length = 0;
-        long timestamp;
-        BufferBlock() {
-            this.data = ByteBuffer.allocateDirect(BUFFER_SIZE);
-            this.timestamp = System.currentTimeMillis();
-        }
-
-        boolean contains(long position, int size) {
-            return position >= startPos && (position + size) <= (startPos + length);
-        }
-    }
-
 
     public BufferedSMBDataSource2(SmbRandomAccessFile smbFile, long size) {
         this.mFile = smbFile;
@@ -53,7 +32,7 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
 
         // 初始化缓冲池
         for (int i = 0; i < NUM_BUFFERS; i++) {
-            mBuffers[i] = new BufferBlock();
+            mBuffers[i] = new BufferBlock(-1, new byte[BUFFER_SIZE], 0);
         }
     }
 
@@ -85,27 +64,19 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
                 int bufferOffset = (int) (currentPos - cached.startPos);
                 int bytesToCopy = Math.min(remaining, cached.length - bufferOffset);
 
-
-//                System.arraycopy(cached.data, bufferOffset,
-//                        buffer, offset + totalRead, bytesToCopy);
-                // 直接从 ByteBuffer 的指定位置读取到字节数组
-                cached.data.flip();
-                // 保存原始position
-                int originalPos = cached.data.position();
-                // 定位到要读取的位置
-                cached.data.position(bufferOffset);
-                // 从当前position开始读取
-                cached.data.get(buffer, offset + totalRead, bytesToCopy);
-                // 恢复position
-                cached.data.position(originalPos);
-
+                System.arraycopy(cached.data, bufferOffset,
+                        buffer, offset + totalRead, bytesToCopy);
                 totalRead += bytesToCopy;
-                mCacheHits++;
-                continue;
+                if(bytesToCopy <= remaining) {
+                    if(cached.length == bufferOffset || (bytesToCopy+bufferOffset >= cached.length)){
+                        cached.hasData = -1;
+                    }
+                    break;
+                }else {
+                    cached.hasData = -1;
+                    continue;
+                }
             }
-
-            // 2. 缓存未命中，从网络读取
-            mCacheMisses++;
 
             // 读取一个完整的缓冲块
             BufferBlock newBlock = readBlockFromNetwork(currentPos);
@@ -120,17 +91,8 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
             int bufferOffset = (int) (currentPos - newBlock.startPos);
             int bytesToCopy = Math.min(remaining, newBlock.length - bufferOffset);
 
-            newBlock.data.flip();
-            // 保存原始position
-            int originalPos = newBlock.data.position();
-            // 定位到要读取的位置
-            newBlock.data.position(bufferOffset);
-            // 从当前position开始读取
-            newBlock.data.get(buffer, offset + totalRead, bytesToCopy);
-            // 恢复position
-            newBlock.data.position(originalPos);
-//            System.arraycopy(newBlock.data, bufferOffset,
-//                    buffer, offset + totalRead, bytesToCopy);
+            System.arraycopy(newBlock.data, bufferOffset,
+                    buffer, offset + totalRead, bytesToCopy);
 
             totalRead += bytesToCopy;
 
@@ -139,8 +101,6 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
                 startPreload(currentPos + bytesToCopy);
             }
         }
-
-        mTotalBytesRead += totalRead;
         return totalRead;
     }
 
@@ -161,11 +121,12 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
 
             if (totalRead > 0) {
                 BufferBlock block = mBuffers[mCurrentBufferIndex];
-                block.data.clear();
-                block.data.put(data,0,totalRead);
                 block.startPos = position;
+                block.data = data;
+                block.hasData = 1;
                 block.length = totalRead;
                 return block;
+//                return new BufferBlock(position, data, totalRead);
             }
         }
         return null;
@@ -201,7 +162,7 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
         mCurrentBufferIndex = (mCurrentBufferIndex + 1) % NUM_BUFFERS;
     }
 
-    private void startPreload(long startPosition) {
+    private void startPreload(long startPosition) throws IOException {
         if (mClosed.get() || startPosition >= mFileSize) {
             return;
         }
@@ -258,8 +219,8 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
     }
 
     private void printStats() {
-        double hitRate = mTotalBytesRead > 0 ?
-                (double) mCacheHits / (mCacheHits + mCacheMisses) * 100 : 0;
+//        double hitRate = mTotalBytesRead > 0 ?
+//                (double) mCacheHits / (mCacheHits + mCacheMisses) * 100 : 0;
 
 //        System.out.println("SMBDataSource Statistics:");
 //        System.out.println("  Total Bytes Read: " + mTotalBytesRead);

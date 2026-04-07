@@ -21,9 +21,8 @@ import android.util.Base64
 import android.util.Log
 import android.view.Surface
 import androidx.core.net.toUri
+import com.jhkj.gl_player.data_source_imp.BufferedSMBDataSource2
 import com.jhkj.gl_player.model.WebResourceFile
-import com.jhkj.gl_player.stream_server.NIOStreamer
-import com.jhkj.gl_player.stream_server.Streamer
 import com.jhkj.gl_player.util.GLDataUtil
 import com.jhkj.gl_player.util.MD5
 import com.jhkj.gl_player.util.ResReadUtils
@@ -33,6 +32,7 @@ import jcifs.context.SingletonContext
 import jcifs.smb.NtlmPasswordAuthenticator
 import jcifs.smb.SmbException
 import jcifs.smb.SmbFile
+import jcifs.smb.SmbRandomAccessFile
 import java.io.File
 import java.io.IOException
 import java.nio.FloatBuffer
@@ -327,22 +327,23 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
                             SingletonContext.getInstance().withGuestCrendentials()
                         }
                         val smbFile = SmbFile(smbUrl, context)
-//                        val randomSmbFile = SmbRandomAccessFile(smbFile, "r")
+                        val randomSmbFile = SmbRandomAccessFile(smbFile, "r")
 //                        // 2. 获取文件输入流
-//                        val smbDataSource = BufferedSMBDataSource(randomSmbFile, smbFile.length())
+                        val smbDataSource = BufferedSMBDataSource2(randomSmbFile, smbFile.length())
                         val cacheFile = getCacheFile(conn.path)
                         val cacheDir = mContext!!.externalCacheDir
 
                         //开启指向本地127.0.0.1的服务器
-                        val streamer = Streamer.getInstance()
-                        val filePath = smbUrl.toUri().path ?: ""
-                        streamer.setStreamSrc(smbFile, null)
-                        val uri = (Streamer.URL + Uri.fromFile(File(filePath))
-                                    .encodedPath).toUri()
+//                        val streamer = Streamer.getInstance()
+//                        val filePath = smbUrl.toUri().path ?: ""
+//                        streamer.setStreamSrc(smbFile, null)
+//                        val uri = (Streamer.URL + Uri.fromFile(File(filePath))
+//                                    .encodedPath).toUri()
 
                         // 3. 关键步骤：将文件描述符（FD）设置为MediaPlayer的数据源
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            mPlayer.setDataSource(mContext!!,uri)
+//                            mPlayer.setDataSource(mContext!!,uri)
+                            mPlayer.setDataSource(smbDataSource)
                         }
                     }catch (e: SmbException){
                         e.printStackTrace()
