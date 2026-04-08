@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.SurfaceTexture
 import android.media.AudioAttributes
 import android.media.AudioManager
+import android.media.MediaDataSource
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.media.PlaybackParams
@@ -22,6 +23,8 @@ import android.util.Log
 import android.view.Surface
 import androidx.core.net.toUri
 import com.jhkj.gl_player.data_source_imp.BufferedSMBDataSource2
+import com.jhkj.gl_player.data_source_imp.StableSMBDataSource
+import com.jhkj.gl_player.local_http_server.MyStreamManager
 import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.gl_player.util.GLDataUtil
 import com.jhkj.gl_player.util.MD5
@@ -101,6 +104,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
     // 旋转矩阵
     private val rotateOriMatrix = FloatArray(16)
     private var lastSeekTo = -1f
+    private var mCurrentDataSource: MediaDataSource? = null
 
     fun setBufferingListener(listener: BufferingListener){
         this.bufferingListener = listener
@@ -278,8 +282,20 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         return 0
     }
 
+    private fun releaseDataSource(){
+        // 1. 必须：手动关闭上一个数据源
+        if (mCurrentDataSource != null) {
+            try {
+                mCurrentDataSource?.close()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun startPlay(){
         try {
+            releaseDataSource()
             isMediaPlaying = false
             isMediaPrepared = false
             mPlayer.reset()
@@ -329,9 +345,11 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
                         val smbFile = SmbFile(smbUrl, context)
                         val randomSmbFile = SmbRandomAccessFile(smbFile, "r")
 //                        // 2. 获取文件输入流
-                        val smbDataSource = BufferedSMBDataSource2(randomSmbFile, smbFile.length())
+//                      mCurrentDataSource = BufferedSMBDataSource2(randomSmbFile, smbFile.length())
+                        mCurrentDataSource = StableSMBDataSource(randomSmbFile, smbFile.length())
                         val cacheFile = getCacheFile(conn.path)
-                        val cacheDir = mContext!!.externalCacheDir
+//                        val cacheDir = mContext!!.externalCacheDir
+//                        val smbDataSource = SMBDataSourceRaf2(cacheFile,randomSmbFile, smbFile.length())
 
                         //开启指向本地127.0.0.1的服务器
 //                        val streamer = Streamer.getInstance()
@@ -339,11 +357,14 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
 //                        streamer.setStreamSrc(smbFile, null)
 //                        val uri = (Streamer.URL + Uri.fromFile(File(filePath))
 //                                    .encodedPath).toUri()
+//                        val proxyUrl = MyStreamManager.getInstance(null)
+//                            .getHttpUrl(smbUrl,conn.user,conn.pass)
+//                        mPlayer.setDataSource(proxyUrl) // 播放器现在访问的是本地 AndServer
 
                         // 3. 关键步骤：将文件描述符（FD）设置为MediaPlayer的数据源
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 //                            mPlayer.setDataSource(mContext!!,uri)
-                            mPlayer.setDataSource(smbDataSource)
+                            mPlayer.setDataSource(mCurrentDataSource)
                         }
                     }catch (e: SmbException){
                         e.printStackTrace()
@@ -421,6 +442,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
 
     fun releasePlay(){
         try {
+            releaseDataSource()
             mPlayer.release()
             isMediaPlaying = false
             isMediaPrepared = false

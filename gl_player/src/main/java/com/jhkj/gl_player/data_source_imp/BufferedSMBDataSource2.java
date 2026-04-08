@@ -4,11 +4,14 @@ import android.annotation.SuppressLint;
 import android.media.MediaDataSource;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
+import jcifs.smb.SmbException;
 import jcifs.smb.SmbRandomAccessFile;
 
 @SuppressLint("NewApi")
@@ -16,15 +19,21 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
     private static final int BUFFER_SIZE = 500 * 1024; // 1024KB缓冲块
     private static final int NUM_BUFFERS = 20; // 缓冲块数量
     private static final int PRELOAD_AHEAD = 4; // 预读块数
-
+    private final AtomicLong lastReadPos = new AtomicLong(-1);
     private final SmbRandomAccessFile mFile;
     private final long mFileSize;
-    private final ExecutorService mExecutor = Executors.newFixedThreadPool(PRELOAD_AHEAD);
+    // 关键优化：使用饱和策略为 DiscardOldestPolicy 的线程池，防止任务无限堆积
+    private final ThreadPoolExecutor mFetchExecutor = new ThreadPoolExecutor(
+            1, 1, 0L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(20),
+            new ThreadPoolExecutor.DiscardOldestPolicy()
+    );
+
+    Future<?> mPreloadTask = null;
     private final BufferBlock[] mBuffers = new BufferBlock[NUM_BUFFERS];
     private int mCurrentBufferIndex = 0;
 
     private final AtomicBoolean mClosed = new AtomicBoolean(false);
-    private Future<?> mPreloadTask;
 
     public BufferedSMBDataSource2(SmbRandomAccessFile smbFile, long size) {
         this.mFile = smbFile;
@@ -51,6 +60,11 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
         if (bytesToRead <= 0) {
             return 0;
         }
+        if(lastReadPos.get() == -1L){
+            lastReadPos.set(position + size);
+        }else{
+
+        }
 
         int totalRead = 0;
 
@@ -61,6 +75,10 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
             // 1. 尝试从缓存读取
             BufferBlock cached = findInCache(currentPos, remaining);
             if (cached != null) {
+                if(cached.needPreload){
+                    cached.needPreload = false;
+                    startPreload(position + BUFFER_SIZE);
+                }
                 int bufferOffset = (int) (currentPos - cached.startPos);
                 int bytesToCopy = Math.min(remaining, cached.length - bufferOffset);
 
@@ -83,7 +101,9 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
             if (newBlock == null || newBlock.length <= 0) {
                 break; // 读取失败或EOF
             }
-
+            newBlock.cacheIndex = 0;
+            newBlock.hasData = 1;
+            newBlock.needPreload = false;
             // 放入缓存
             addToCache(newBlock);
 
@@ -182,10 +202,13 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
             }
 
             if (!alreadyCached) {
-                mPreloadTask = mExecutor.submit(() -> {
+                final int outIdx = i;
+                mPreloadTask = mFetchExecutor.submit(() -> {
                     try {
                         BufferBlock block = readBlockFromNetwork(preloadPos);
                         if (block != null && block.length > 0) {
+                            block.cacheIndex = (outIdx+1);
+                            block.needPreload = ((outIdx+1) == PRELOAD_AHEAD);
                             addToCache(block);
                         }
                     } catch (Exception e) {
@@ -204,14 +227,20 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
     @Override
     public void close() throws IOException {
         if (mClosed.compareAndSet(false, true)) {
-            if (mPreloadTask != null) {
-                mPreloadTask.cancel(true);
-            }
-
-            mExecutor.shutdownNow();
-            synchronized (mFile) {
-                mFile.close();
-            }
+            mFetchExecutor.shutdownNow();
+            new Thread(){
+                @Override
+                public void run() {
+                    super.run();
+                    synchronized (mFile) {
+                        try {
+                            mFile.close();
+                        } catch (SmbException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            }.start();
 
             // 打印缓存统计
             printStats();
