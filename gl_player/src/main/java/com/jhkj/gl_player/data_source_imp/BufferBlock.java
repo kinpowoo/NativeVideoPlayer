@@ -7,6 +7,8 @@ public class BufferBlock {
     int length;
     long timestamp;
     int hasData = -1;
+    volatile int cacheIndex = 0;
+    volatile boolean needPreload = false;
 
     BufferBlock(long startPos, byte[] data, int length) {
         this.startPos = startPos;

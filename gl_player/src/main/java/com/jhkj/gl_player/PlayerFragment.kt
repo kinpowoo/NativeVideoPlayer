@@ -26,6 +26,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.jhkj.gl_player.fragment.PlayerBaseFragment
+import com.jhkj.gl_player.local_http_server.MyStreamManager
 import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.gl_player.util.DensityUtil
 import com.jhkj.gl_player.util.SpeedDialog
@@ -98,6 +99,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         super.onViewCreated(view, savedInstanceState)
         val dp240 = DensityUtil.dip2px(requireContext(), 240f).toInt()
         setVideoViewScale(ViewGroup.LayoutParams.MATCH_PARENT, dp240)
+        MyStreamManager.getInstance(requireContext()).startServer()
 
         activity?.let {
             // 1. 设置沉浸式状态栏
@@ -747,6 +749,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
 
     override fun onDestroy() {
         cancelTimeTask()
+        MyStreamManager.getInstance(requireContext()).stopServer()
         glPlayer?.release()
         super.onDestroy()
     }
