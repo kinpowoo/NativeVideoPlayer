@@ -22,6 +22,7 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
     private final ExecutorService mExecutor = Executors.newFixedThreadPool(PRELOAD_AHEAD);
     private final BufferBlock[] mBuffers = new BufferBlock[NUM_BUFFERS];
     private int mCurrentBufferIndex = 0;
+    private int lastUseBufferIdx = 0;
 
     private final AtomicBoolean mClosed = new AtomicBoolean(false);
     private Future<?> mPreloadTask;
@@ -70,10 +71,12 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
                 if(bytesToCopy <= remaining) {
                     if(cached.length == bufferOffset || (bytesToCopy+bufferOffset >= cached.length)){
                         cached.hasData = -1;
+                        lastUseBufferIdx = (lastUseBufferIdx + 1) % NUM_BUFFERS;
                     }
                     break;
                 }else {
                     cached.hasData = -1;
+                    lastUseBufferIdx = (lastUseBufferIdx + 1) % NUM_BUFFERS;
                     continue;
                 }
             }
@@ -133,20 +136,29 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
     }
 
     private BufferBlock findInCache(long position, int size) {
+        if(lastUseBufferIdx >= 0 && lastUseBufferIdx < NUM_BUFFERS){
+            BufferBlock block = mBuffers[lastUseBufferIdx];
+            if (block.contains(position, size)) {
+                return block;
+            }
+        }
+
         int len = NUM_BUFFERS;
         int halfLen = len/2;
         int start = halfLen;
         int right = halfLen + 1;
         while(start >= 0 || right < len){
-            if(start >= 0) {
+            if(start >= 0 && start != lastUseBufferIdx) {
                 BufferBlock block1 = mBuffers[start];
                 if (block1.contains(position, size)) {
+                    lastUseBufferIdx = start;
                     return block1;
                 }
             }
-            if(right < len) {
+            if(right < len && right != lastUseBufferIdx) {
                 BufferBlock block2 = mBuffers[right];
                 if (block2.contains(position, size)) {
+                    lastUseBufferIdx = right;
                     return block2;
                 }
             }
