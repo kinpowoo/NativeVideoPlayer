@@ -1,4 +1,4 @@
-package com.sin_tech.ble_manager.ble_tradition.service;
+package com.sin_tech.ble_manager.ble_server;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -7,7 +7,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -15,57 +14,48 @@ import android.content.IntentFilter;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
 import com.sin_tech.ble_manager.R;
-import com.sin_tech.ble_manager.ble_tradition.activity.BlueClientActivity;
-import com.sin_tech.ble_manager.ble_tradition.client.BlueDirectClient;
-import com.sin_tech.ble_manager.ble_tradition.protocol.ClientCallback;
-import com.sin_tech.ble_manager.ble_tradition.protocol.FileReceiveCallback;
 
 import org.jspecify.annotations.Nullable;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.net.InetSocketAddress;
 
 
 /**
  * WiFi Direct 前台服务
  * 保证服务端在后台持续运行
  */
-public class BlueClientService extends Service implements ClientCallback, FileReceiveCallback {
+public class BleForegroundService extends Service implements ServerCallback, ServerFileTransferCallback {
 
-    private static final String TAG = "WiFiDirectClient";
+    private static final String TAG = "WiFiDirectService";
     private static final int NOTIFICATION_ID = 1001;
-    private static final String CHANNEL_ID = "WiFiDirectChannel";
-    private static final String CHANNEL_NAME = "WiFi Direct Service";
+    private static final String CHANNEL_ID = "BLEChannel";
+    private static final String CHANNEL_NAME = "Bluetooth Service";
 
     // 服务器实例
-    private BlueDirectClient wiFiDirectClient;
-    private boolean isClientRunning = false;
+    private BleServerManager blueServer;
 
     private final IBinder binder;
 
-    private WeakReference<BlueClientActivity> ref;
+    private WeakReference<BleServerActivity> ref;
 
     // 唤醒锁
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
 
-    public BlueClientService() {
+    public BleForegroundService() {
         binder = new SerialBinder();
     }
-    public final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    public void setWeakRef(WeakReference<BlueClientActivity> actRef){
+    public void setWeakRef(WeakReference<BleServerActivity> actRef){
         this.ref = actRef;
     }
     
@@ -107,13 +97,13 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "WiFiDirectForegroundService started");
-        
+        startBlueServer();
         // 返回START_STICKY，系统会自动重启服务
         return START_STICKY;
     }
 
-    public @Nullable BlueDirectClient getClient(){
-        return wiFiDirectClient;
+    public @Nullable BleServerManager getServer(){
+        return blueServer;
     }
     
     /**
@@ -141,13 +131,13 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
      * 创建前台服务通知
      */
     private Notification createNotification() {
-        Intent notificationIntent = new Intent(this, BlueClientActivity.class);
+        Intent notificationIntent = new Intent(this, BleServerActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(
             this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE
         );
         
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Blue 服务运行中")
+            .setContentTitle("蓝牙服务运行中")
             .setContentText("正在保持连接，点击返回应用")
             .setSmallIcon(R.drawable.ic_blue_notify)
             .setContentIntent(pendingIntent)
@@ -161,119 +151,114 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
     }
 
 
-    // ======== Client Callback Start ===================================================
+    // ======== Server Callback Start ===================================================
     @Override
-    public void onConnected(String clientId){
-        updateNotification("已连接到服务端");
+    public void onClientConnected(@NonNull String clientId) {
+        Log.d(TAG, "Client connected: " + clientId);
+        updateNotification("设备已连接: " + clientId);
         if(ref.get() != null){
-            ref.get().onConnected(clientId);
+            ref.get().onClientConnected(clientId);
         }
     }
+
     @Override
-    public void onDisconnected(String clientId,String reason){
-        updateNotification("等待连接到服务端...");
+    public void onClientDisconnected(@NonNull String clientId, String reason) {
+        updateNotification("等待设备连接...");
         if(ref.get() != null){
-            ref.get().onDisconnected(clientId,reason);
+            ref.get().onClientDisconnected(clientId,reason);
         }
     }
+
     @Override
-    public void onMessageReceived(String clientId,String message){
+    public void onMessageReceived(@NonNull String clientId, String message) {
         if(ref.get() != null){
             ref.get().onMessageReceived(clientId,message);
         }
     }
+
     @Override
-    public void onHeartbeatReceived(String clientId){
+    public void onHeartbeatReceived(@NonNull String clientId) {
         // 心跳处理
         if(ref.get() != null){
             ref.get().onHeartbeatReceived(clientId);
         }
     }
+
     @Override
-    public void onHeartbeatAckReceived(String clientId){
+    public void onHeartbeatAckReceived(@NonNull String clientId) {
         // 心跳确认处理
         if(ref.get() != null){
             ref.get().onHeartbeatAckReceived(clientId);
         }
     }
+
     @Override
-    public void onFileAckReceived(String clientId,String ack){
+    public void onFileAckReceived(@NonNull String clientId, String ack) {
+        Log.d(TAG, "File ack from " + clientId + ": " + ack);
         if(ref.get() != null){
             ref.get().onFileAckReceived(clientId,ack);
         }
     }
-    // ======== Client Callback End ===================================================
+    // ======== Server Callback End ===================================================
 
 
     // ======== File Transfer Callback Start ===================================================
     @Override
-    public void onFileReceiveStarted(String clientId,String fileId, String fileName, long fileSize){
+    public void onFileTransferStarted(String clientId, String fileId,
+                                      String fileName, long fileSize) {
+        Log.d(TAG, "File transfer started: " + fileName);
         updateNotification("正在接收文件: " + fileName);
         if(ref.get() != null){
-            ref.get().onFileReceiveStarted(clientId,fileId,fileName,fileSize);
+            ref.get().onFileTransferStarted(clientId,fileId,fileName,fileSize);
         }
     }
+
     @Override
-    public void onFileChunkReceived(String clientId,String fileId, int chunkIndex, int chunkSize){
+    public void onFileTransferCompleted(String clientId, String fileId,
+                                        String fileName, String filePath) {
+        updateNotification("文件接收完成: " + fileName);
+        if(ref.get() != null){
+            ref.get().onFileTransferCompleted(clientId,fileId,fileName,filePath);
+        }
+    }
+
+    @Override
+    public void onFileChunkReceived(String clientId, String fileId,
+                                    int chunkIndex, int chunkSize) {
         // 分片接收处理
         if(ref.get() != null){
             ref.get().onFileChunkReceived(clientId,fileId,chunkIndex,chunkSize);
         }
     }
+
     @Override
-    public void onFileReceived(String clientId,String fileId, String fileName, String filePath){
-        updateNotification("文件接收完成: " + fileName);
+    public void onFileTransferError(String clientId, String fileId, String error) {
         if(ref.get() != null){
-            ref.get().onFileReceived(clientId,fileId,fileName,filePath);
+            ref.get().onFileTransferError(clientId,fileId,error);
         }
     }
-    @Override
-    public void onFileTransferError(String clientId,String error){
-        if(ref.get() != null){
-            ref.get().onFileTransferError(clientId,error);
-        }
-    }
+
     // ======== File Transfer Callback End ===================================================
     
     /**
      * 启动WiFi Direct服务器
      */
-    public void connectToServer(Context context, BluetoothDevice device,
-                                 WeakReference<ClientCallback> callback, WeakReference<FileReceiveCallback> fileCallback) {
-        if (isClientRunning) {
-            stopWiFiDirectClient();
-        }
-        File parent = context.getExternalFilesDir("temp");
-        if(parent == null || !parent.exists()){
-            parent.mkdirs();
-        }
-        String cacheDir = parent.getAbsolutePath();
-        new Thread(){
-            @Override
-            public void run() {
-                super.run();
-                if(wiFiDirectClient != null) {
-                    wiFiDirectClient.disconnect();
-                }
-                wiFiDirectClient = null;
-                wiFiDirectClient = new BlueDirectClient(cacheDir, callback, fileCallback);
-                String clientId = wiFiDirectClient.getClientId();
-                try {
-                    wiFiDirectClient.connect(device);
-                } catch (IOException e) {
-//                    throw new RuntimeException(e);
-                    final String error = e.getLocalizedMessage();
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            onDisconnected(clientId,error);
-                            updateNotification("客户端启动失败");
-                        }
-                    });
-
-                }
+    private void startBlueServer() {
+        stopBlueServer();
+        try {
+            File parent = this.getExternalFilesDir("temp");
+            if(parent == null || !parent.exists()){
+                parent.mkdirs();
             }
-        }.start();
+            String cacheDir = parent.getAbsolutePath();
+            // 启动服务器（使用8888端口）
+            blueServer = new BleServerManager(this, cacheDir, this,this);
+            blueServer.startServer();
+            updateNotification("等待设备连接...");
+            
+        } catch (Exception e) {
+            updateNotification("服务器启动失败");
+        }
     }
     
     /**
@@ -281,9 +266,9 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
      */
     private void updateNotification(String contentText) {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("WiFi Direct 服务运行中")
+            .setContentTitle("蓝牙服务运行中")
             .setContentText(contentText)
-            .setSmallIcon(R.drawable.wifi_notify_small)
+            .setSmallIcon(R.drawable.ic_blue_notify)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
@@ -358,6 +343,7 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
         filter.addAction(Intent.ACTION_SCREEN_ON);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         filter.addAction(Intent.ACTION_USER_PRESENT);
+        
         registerReceiver(screenReceiver, filter);
     }
     
@@ -383,12 +369,11 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
     /**
      * 停止WiFi Direct服务器
      */
-    private void stopWiFiDirectClient() {
-        if (wiFiDirectClient != null) {
+    private void stopBlueServer() {
+        if (blueServer != null) {
             try {
-                wiFiDirectClient.disconnect();
-                wiFiDirectClient = null;
-                isClientRunning = false;
+                blueServer.stopServer();
+                blueServer = null;
                 Log.d(TAG, "WiFi Direct server stopped");
             } catch (Exception e) {
                 Log.e(TAG, "Error stopping WiFi Direct server", e);
@@ -401,7 +386,8 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
         Log.d(TAG, "WiFiDirectForegroundService destroying");
         
         // 停止服务器
-        stopWiFiDirectClient();
+        stopBlueServer();
+        
         // 释放唤醒锁
         releaseLocks();
         
@@ -424,14 +410,14 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
     }
 
     public class SerialBinder extends Binder {
-        public BlueClientService getService() { return BlueClientService.this; }
+        public BleForegroundService getService() { return BleForegroundService.this; }
     }
 
     /**
      * 启动前台服务
      */
     public static void startService(Context context) {
-        Intent serviceIntent = new Intent(context, BlueClientService.class);
+        Intent serviceIntent = new Intent(context, BleForegroundService.class);
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(serviceIntent);
@@ -444,7 +430,7 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
      * 停止前台服务
      */
     public static void stopService(Context context) {
-        Intent serviceIntent = new Intent(context, BlueClientService.class);
+        Intent serviceIntent = new Intent(context, BleForegroundService.class);
         context.stopService(serviceIntent);
     }
 }

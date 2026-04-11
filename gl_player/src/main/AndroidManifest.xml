@@ -13,6 +13,16 @@
             android:name=".data_source_imp.SMBContentProvider"
             android:authorities="com.jhkj.videoplayer.smbProvider"
             android:exported="false" />
+        <activity
+            android:name=".gsy_player.PlayTVActivity"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Translucent" />
+        <activity
+            android:name=".gsy_player.GsyPlayActivity"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Translucent" />
     </application>
 
 </manifest>

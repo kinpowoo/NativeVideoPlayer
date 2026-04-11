@@ -10,17 +10,18 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 import jcifs.smb.SmbException;
 import jcifs.smb.SmbRandomAccessFile;
 
 @SuppressLint("NewApi")
 public class BufferedSMBDataSource2 extends MediaDataSource {
-    private static final int BUFFER_SIZE = 500 * 1024; // 1024KB缓冲块
+    private static final int BUFFER_SIZE = 600 * 1024; // 1024KB缓冲块
     private static final int NUM_BUFFERS = 20; // 缓冲块数量
     private static final int PRELOAD_AHEAD = 4; // 预读块数
-    private final AtomicLong lastReadPos = new AtomicLong(-1);
-    private final SmbRandomAccessFile mFile;
+    private SmbRandomAccessFile mFile;
+    private SmbRandomAccessFile mCacheFile;
     private final long mFileSize;
     // 关键优化：使用饱和策略为 DiscardOldestPolicy 的线程池，防止任务无限堆积
     private final ThreadPoolExecutor mFetchExecutor = new ThreadPoolExecutor(
@@ -32,11 +33,15 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
     Future<?> mPreloadTask = null;
     private final BufferBlock[] mBuffers = new BufferBlock[NUM_BUFFERS];
     private int mCurrentBufferIndex = 0;
-
+    private final AtomicLong lastReadPos = new AtomicLong(-1);
+    private final ReentrantLock raf1Lock = new ReentrantLock();
+    private final ReentrantLock raf2Lock = new ReentrantLock();
     private final AtomicBoolean mClosed = new AtomicBoolean(false);
 
-    public BufferedSMBDataSource2(SmbRandomAccessFile smbFile, long size) {
+    public BufferedSMBDataSource2(SmbRandomAccessFile smbFile,
+                                  SmbRandomAccessFile cacheFile,long size) {
         this.mFile = smbFile;
+        this.mCacheFile = cacheFile;
         this.mFileSize = size;
 
         // 初始化缓冲池
@@ -60,11 +65,6 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
         if (bytesToRead <= 0) {
             return 0;
         }
-        if(lastReadPos.get() == -1L){
-            lastReadPos.set(position + size);
-        }else{
-
-        }
 
         int totalRead = 0;
 
@@ -73,31 +73,45 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
             int remaining = bytesToRead - totalRead;
 
             // 1. 尝试从缓存读取
-            BufferBlock cached = findInCache(currentPos, remaining);
-            if (cached != null) {
-                if(cached.needPreload){
-                    cached.needPreload = false;
-                    startPreload(position + BUFFER_SIZE);
-                }
-                int bufferOffset = (int) (currentPos - cached.startPos);
-                int bytesToCopy = Math.min(remaining, cached.length - bufferOffset);
-
-                System.arraycopy(cached.data, bufferOffset,
-                        buffer, offset + totalRead, bytesToCopy);
-                totalRead += bytesToCopy;
-                if(bytesToCopy <= remaining) {
-                    if(cached.length == bufferOffset || (bytesToCopy+bufferOffset >= cached.length)){
-                        cached.hasData = -1;
+            boolean needReadCache = true;
+            if(lastReadPos.get() == -1L){
+                lastReadPos.set(position);
+                needReadCache = false;
+            }else{
+//                if(Math.abs(position-lastReadPos.get()) > BUFFER_SIZE){
+//                    needReadCache = false;
+//                    if (mPreloadTask != null) {
+//                        mPreloadTask.cancel(true);
+//                    }
+//                }
+            }
+            if(needReadCache) {
+                BufferBlock cached = findInCache(currentPos, remaining);
+                if (cached != null) {
+                    if (cached.needPreload) {
+                        cached.needPreload = false;
+                        startPreload(position + BUFFER_SIZE);
                     }
-                    break;
-                }else {
-                    cached.hasData = -1;
-                    continue;
+                    int bufferOffset = (int) (currentPos - cached.startPos);
+                    int bytesToCopy = Math.min(remaining, cached.length - bufferOffset);
+
+                    System.arraycopy(cached.data, bufferOffset,
+                            buffer, offset + totalRead, bytesToCopy);
+                    totalRead += bytesToCopy;
+                    if (bytesToCopy <= remaining) {
+                        if (cached.length == bufferOffset || (bytesToCopy + bufferOffset >= cached.length)) {
+                            cached.hasData = -1;
+                        }
+                        break;
+                    } else {
+                        cached.hasData = -1;
+                        continue;
+                    }
                 }
             }
 
             // 读取一个完整的缓冲块
-            BufferBlock newBlock = readBlockFromNetwork(currentPos);
+            BufferBlock newBlock = readBlockSync(currentPos);
             if (newBlock == null || newBlock.length <= 0) {
                 break; // 读取失败或EOF
             }
@@ -124,31 +138,70 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
         return totalRead;
     }
 
-    private BufferBlock readBlockFromNetwork(long position) throws IOException {
-        synchronized (mFile) {
-            if (position != mFile.getFilePointer()) {
-                mFile.seek(position);
+    private BufferBlock readBlockSync(long position){
+        try {
+            if (raf1Lock.tryLock(100, TimeUnit.MILLISECONDS)) {
+                try {
+                    if (position != mFile.getFilePointer()) {
+                        mFile.seek(position);
+                    }
+
+                    byte[] data = new byte[BUFFER_SIZE];
+                    int bytesRead = 0;
+                    int totalRead = 0;
+
+                    // 读取直到填满缓冲块或到达文件末尾
+                    while (totalRead < BUFFER_SIZE && (bytesRead = mFile.read(data, totalRead, BUFFER_SIZE - totalRead)) != -1) {
+                        totalRead += bytesRead;
+                    }
+
+                    if (totalRead > 0) {
+                        BufferBlock block = mBuffers[mCurrentBufferIndex];
+                        block.startPos = position;
+                        block.data = data;
+                        block.hasData = 1;
+                        block.length = totalRead;
+                        return block;
+                    }
+                } finally {
+                    raf1Lock.unlock();
+                }
             }
+        } catch (Exception ignore) {}
+        return null;
+    }
 
-            byte[] data = new byte[BUFFER_SIZE];
-            int bytesRead = 0;
-            int totalRead = 0;
+    private BufferBlock readBlockAsync(long position) throws IOException {
+        try {
+            if (raf2Lock.tryLock(1000, TimeUnit.MILLISECONDS)) {
+                try {
+                    if (position != mCacheFile.getFilePointer()) {
+                        mCacheFile.seek(position);
+                    }
 
-            // 读取直到填满缓冲块或到达文件末尾
-            while (totalRead < BUFFER_SIZE && (bytesRead = mFile.read(data, totalRead, BUFFER_SIZE - totalRead)) != -1) {
-                totalRead += bytesRead;
-            }
+                    byte[] data = new byte[BUFFER_SIZE];
+                    int bytesRead = 0;
+                    int totalRead = 0;
 
-            if (totalRead > 0) {
-                BufferBlock block = mBuffers[mCurrentBufferIndex];
-                block.startPos = position;
-                block.data = data;
-                block.hasData = 1;
-                block.length = totalRead;
-                return block;
+                    // 读取直到填满缓冲块或到达文件末尾
+                    while (totalRead < BUFFER_SIZE && (bytesRead = mCacheFile.read(data, totalRead, BUFFER_SIZE - totalRead)) != -1) {
+                        totalRead += bytesRead;
+                    }
+
+                    if (totalRead > 0) {
+                        BufferBlock block = mBuffers[mCurrentBufferIndex];
+                        block.startPos = position;
+                        block.data = data;
+                        block.hasData = 1;
+                        block.length = totalRead;
+                        return block;
 //                return new BufferBlock(position, data, totalRead);
+                    }
+                }finally {
+                    raf2Lock.unlock();
+                }
             }
-        }
+        } catch (Exception ignore) {}
         return null;
     }
 
@@ -205,7 +258,7 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
                 final int outIdx = i;
                 mPreloadTask = mFetchExecutor.submit(() -> {
                     try {
-                        BufferBlock block = readBlockFromNetwork(preloadPos);
+                        BufferBlock block = readBlockAsync(preloadPos);
                         if (block != null && block.length > 0) {
                             block.cacheIndex = (outIdx+1);
                             block.needPreload = ((outIdx+1) == PRELOAD_AHEAD);
@@ -228,22 +281,36 @@ public class BufferedSMBDataSource2 extends MediaDataSource {
     public void close() throws IOException {
         if (mClosed.compareAndSet(false, true)) {
             mFetchExecutor.shutdownNow();
-            new Thread(){
-                @Override
-                public void run() {
-                    super.run();
-                    synchronized (mFile) {
+            if(mFile != null) {
+                try {
+                    if (raf1Lock.tryLock(1000, TimeUnit.MILLISECONDS)) {
                         try {
                             mFile.close();
                         } catch (SmbException e) {
-                            throw new RuntimeException(e);
+                            e.printStackTrace();
+                        }finally{
+                            raf1Lock.unlock();
+                            mFile = null;
                         }
                     }
-                }
-            }.start();
-
+                } catch (Exception ignore) {}
+            }
+            if(mCacheFile != null) {
+                try {
+                    if (raf2Lock.tryLock(1000, TimeUnit.MILLISECONDS)) {
+                        try {
+                            mCacheFile.close();
+                        } catch (SmbException e) {
+                            e.printStackTrace();
+                        }finally{
+                            raf2Lock.unlock();
+                            mCacheFile = null;
+                        }
+                    }
+                } catch (Exception ignore) {}
+            }
             // 打印缓存统计
-            printStats();
+//            printStats();
         }
     }
 

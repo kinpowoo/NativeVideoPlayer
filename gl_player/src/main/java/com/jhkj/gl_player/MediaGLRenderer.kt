@@ -22,6 +22,7 @@ import android.util.Base64
 import android.util.Log
 import android.view.Surface
 import androidx.core.net.toUri
+import androidx.lifecycle.lifecycleScope
 import com.jhkj.gl_player.data_source_imp.BufferedSMBDataSource2
 import com.jhkj.gl_player.data_source_imp.StableSMBDataSource
 import com.jhkj.gl_player.local_http_server.MyStreamManager
@@ -36,8 +37,13 @@ import jcifs.smb.NtlmPasswordAuthenticator
 import jcifs.smb.SmbException
 import jcifs.smb.SmbFile
 import jcifs.smb.SmbRandomAccessFile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.io.RandomAccessFile
 import java.nio.FloatBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
@@ -50,20 +56,22 @@ import kotlin.math.min
  * @version 1.0
  * @des：mediaplayer 视频播放render
  */
-class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableListener?):GLSurfaceView.Renderer {
+class MediaGLRenderer(ctx: Context?, listener: SurfaceTexture.OnFrameAvailableListener?) :
+    GLSurfaceView.Renderer {
     private var mContext: Context? = null
+
     //透视矩阵、相机矩阵定义放在基类中，方便传给其他绘制对象
     private val mMVPMatrix = FloatArray(16)
     private val mTempMatrix = FloatArray(16)
     private var mProjectMatrix = FloatArray(16)
     private var mCameraMatrix = FloatArray(16)
     private var mProgram = 0
-    private var playUrl:String? = null
-    private var playUri:Uri? = null
+    private var playUrl: String? = null
+    private var playUri: Uri? = null
     private var webdavResource: WebResourceFile? = null
 
-    private var vDuration:Int = 0  //视频的总时长（毫秒）
-    private var vProgressTime:Int = 0  //视频的当前位置（毫秒）
+    private var vDuration: Int = 0  //视频的总时长（毫秒）
+    private var vProgressTime: Int = 0  //视频的当前位置（毫秒）
     private var vWidth = 0
     private var vHeight = 0
     private var screeW = 0
@@ -72,49 +80,56 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
     private var isBuffering = false
     private var isMediaPlaying = false
     private var isVolumeMuted = false
-    private var bufferingListener:BufferingListener? = null
-    private var playStateListener:PlayStateListener? = null
-    private var volumeStateListener:VolumeStateListener? = null
+    private var bufferingListener: BufferingListener? = null
+    private var playStateListener: PlayStateListener? = null
+    private var volumeStateListener: VolumeStateListener? = null
     private var isVideoRotated = false
     private var isReleased = false
     private var isFullScreen = false
     private var mHandler = Handler(Looper.getMainLooper())
 
     private val mPosCoordinate = floatArrayOf(
-        -1f, -1f,0f,
-        -1f, 1f,0f,
-        1f, 1f,0f,
-        -1f, -1f,0f,
-        1f, 1f,0f,
-        1f, -1f,0f)
-    private val mTexCoordinate = floatArrayOf(0f, 0f, 0f, 1f, 1f, 1f,0f, 0f, 1f, 1f, 1f, 0f)
+        -1f, -1f, 0f,
+        -1f, 1f, 0f,
+        1f, 1f, 0f,
+        -1f, -1f, 0f,
+        1f, 1f, 0f,
+        1f, -1f, 0f
+    )
+    private val mTexCoordinate = floatArrayOf(0f, 0f, 0f, 1f, 1f, 1f, 0f, 0f, 1f, 1f, 1f, 0f)
 
     private var mPosBuffer: FloatBuffer? = null
     private var mTexBuffer: FloatBuffer? = null
     private var mPlayer: MediaPlayer
+
     //!!! 此路径需根据自己情况，改为自己手机里的视频路径
     private var textureId = 0
-    private lateinit var surfaceTexture:SurfaceTexture
+    private lateinit var surfaceTexture: SurfaceTexture
     private var listener: SurfaceTexture.OnFrameAvailableListener? = null
 
     private var uPosHandle = 0
     private var aTexHandle = 0
     private var mMVPMatrixHandle = 0
     private var mTexRotateMatrixHandle = 0
+
     // 旋转矩阵
     private val rotateOriMatrix = FloatArray(16)
     private var lastSeekTo = -1f
     private var mCurrentDataSource: MediaDataSource? = null
+    private var smbFile: SmbFile? = null
+    private var smbRaf1: SmbRandomAccessFile? = null
+    private var smbRaf2: SmbRandomAccessFile? = null
 
-    fun setBufferingListener(listener: BufferingListener){
+
+    fun setBufferingListener(listener: BufferingListener) {
         this.bufferingListener = listener
     }
 
-    fun setPlayStateListener(listener: PlayStateListener){
+    fun setPlayStateListener(listener: PlayStateListener) {
         this.playStateListener = listener
     }
 
-    fun setVolumeStateListener(listener: VolumeStateListener){
+    fun setVolumeStateListener(listener: VolumeStateListener) {
         this.volumeStateListener = listener
     }
 
@@ -126,7 +141,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         Matrix.setIdentityM(mTempMatrix, 0)
 
         mPlayer = MediaPlayer()
-        if(Build.VERSION.SDK_INT >=23){
+        if (Build.VERSION.SDK_INT >= 23) {
             //配置播放器
             val aa = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -134,7 +149,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
 //                .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
                 .build()
             mPlayer.setAudioAttributes(aa)
-        }else{
+        } else {
             mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC)
         }
 
@@ -143,10 +158,10 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
             //已准备好播放
             vDuration = mPlayer.duration
             vProgressTime = mPlayer.currentPosition
-            if(isVideoRotated) {
+            if (isVideoRotated) {
                 vWidth = mPlayer.videoHeight
                 vHeight = mPlayer.videoWidth
-            }else{
+            } else {
                 vWidth = mPlayer.videoWidth
                 vHeight = mPlayer.videoHeight
             }
@@ -154,9 +169,9 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
             mPlayer.start()
             bufferingListener?.bufferingStop()
             isBuffering = false
-            playStateListener?.playStarted(vProgressTime,vDuration)
+            playStateListener?.playStarted(vProgressTime, vDuration)
             isMediaPlaying = true
-            if(lastSeekTo != -1f){
+            if (lastSeekTo != -1f) {
                 seekTo(lastSeekTo)
                 lastSeekTo = -1f
             }
@@ -165,13 +180,14 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
             isMediaPlaying = false
             isMediaPrepared = false
             playStateListener?.playFinished()
+            releaseDataSource()
         }
-        mPlayer.setOnBufferingUpdateListener(object :MediaPlayer.OnBufferingUpdateListener{
+        mPlayer.setOnBufferingUpdateListener(object : MediaPlayer.OnBufferingUpdateListener {
             override fun onBufferingUpdate(mp: MediaPlayer?, percent: Int) {
                 bufferingListener?.bufferingProgress(percent)
             }
         })
-        mPlayer.setOnErrorListener(object : MediaPlayer.OnErrorListener{
+        mPlayer.setOnErrorListener(object : MediaPlayer.OnErrorListener {
             override fun onError(p0: MediaPlayer?, p1: Int, p2: Int): Boolean {
                 playStateListener?.playError()
                 return true
@@ -189,16 +205,32 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         mTexBuffer = GLDataUtil.createFloatBuffer(mTexCoordinate)
     }
 
-    private fun initMediaPlayer(){
+    private fun initMediaPlayer() {
         val texture = IntArray(1)
         GLES30.glGenTextures(1, texture, 0) //生成一个OpenGl纹理
         textureId = texture[0]
         GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, texture[0]) //申请纹理存储区域并设置相关参数
-        GLES30.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR.toFloat())
-        GLES30.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR.toFloat())
-        GLES30.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE)
-        GLES30.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE)
-        GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES,0)
+        GLES30.glTexParameterf(
+            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
+            GL10.GL_TEXTURE_MIN_FILTER,
+            GL10.GL_LINEAR.toFloat()
+        )
+        GLES30.glTexParameterf(
+            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
+            GL10.GL_TEXTURE_MAG_FILTER,
+            GL10.GL_LINEAR.toFloat()
+        )
+        GLES30.glTexParameteri(
+            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
+            GL10.GL_TEXTURE_WRAP_S,
+            GL10.GL_CLAMP_TO_EDGE
+        )
+        GLES30.glTexParameteri(
+            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
+            GL10.GL_TEXTURE_WRAP_T,
+            GL10.GL_CLAMP_TO_EDGE
+        )
+        GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0)
         surfaceTexture = SurfaceTexture(textureId)
         surfaceTexture.setOnFrameAvailableListener(listener)
 
@@ -209,7 +241,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
     }
 
 
-    fun loadUrl(url:String){
+    fun loadUrl(url: String) {
         playUrl = url
         playUri = null
         webdavResource = null
@@ -217,7 +249,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         startPlay()
     }
 
-    fun loadUri(uri: Uri){
+    fun loadUri(uri: Uri) {
         playUrl = null
         playUri = uri
         webdavResource = null
@@ -226,16 +258,18 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         startPlay()
     }
 
-    fun loadWebResource(conn: WebResourceFile){
+    fun loadWebResource(conn: WebResourceFile) {
         playUrl = null
         playUri = null
         webdavResource = conn
-         // Base64 编码认证信息
+        // Base64 编码认证信息
         val credentials = conn.user + ":" + conn.pass
-        val auth = "Basic " + Base64.encodeToString(credentials.toByteArray(),
-            Base64.NO_WRAP)
-        val headers =  mapOf("Authorization" to auth)
-        val rotation = getVideoRotation(conn.path,headers)
+        val auth = "Basic " + Base64.encodeToString(
+            credentials.toByteArray(),
+            Base64.NO_WRAP
+        )
+        val headers = mapOf("Authorization" to auth)
+        val rotation = getVideoRotation(conn.path, headers)
         isVideoRotated = (rotation == 90)
         startPlay()
     }
@@ -244,7 +278,8 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(filePath)
-            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+            val rotation =
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
             return rotation?.toIntOrNull() ?: 0
         } catch (e: Exception) {
             e.printStackTrace()
@@ -254,11 +289,12 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         return 0
     }
 
-    fun getVideoRotation(uri: String,headers:Map<String,String>): Int {
+    fun getVideoRotation(uri: String, headers: Map<String, String>): Int {
         val retriever = MediaMetadataRetriever()
         try {
-            retriever.setDataSource(uri,headers)
-            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+            retriever.setDataSource(uri, headers)
+            val rotation =
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
             return rotation?.toIntOrNull() ?: 0
         } catch (e: Exception) {
             e.printStackTrace()
@@ -271,8 +307,9 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
     fun getVideoRotation(uri: Uri): Int {
         val retriever = MediaMetadataRetriever()
         try {
-            retriever.setDataSource(mContext,uri)
-            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+            retriever.setDataSource(mContext, uri)
+            val rotation =
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
             return rotation?.toIntOrNull() ?: 0
         } catch (e: Exception) {
             e.printStackTrace()
@@ -282,44 +319,59 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         return 0
     }
 
-    private fun releaseDataSource(){
+    private fun releaseDataSource() {
         // 1. 必须：手动关闭上一个数据源
-        if (mCurrentDataSource != null) {
-            try {
-                mCurrentDataSource?.close()
-            } catch (e: IOException) {
-                e.printStackTrace()
+        Thread {
+            if(smbRaf1 != null){
+                smbRaf1?.close()
+                smbRaf1 = null
             }
-        }
+            if(smbRaf2 != null){
+                smbRaf2?.close()
+                smbRaf2 = null
+            }
+            if(smbFile != null){
+                smbFile?.close()
+                smbFile = null
+            }
+            if (mCurrentDataSource != null) {
+                try {
+                    mCurrentDataSource?.close()
+                    mCurrentDataSource = null
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+            }
+        }.start()
     }
 
-    fun startPlay(){
-        try {
-            releaseDataSource()
-            isMediaPlaying = false
-            isMediaPrepared = false
-            mPlayer.reset()
-            if(playUrl != null) {
-                mPlayer.setDataSource(playUrl)
-            }
-            if(playUri != null) {
-                mPlayer.setDataSource(mContext!!,playUri!!)
-            }
-            webdavResource?.let { conn ->
-                if(conn.path.startsWith("http")) {
-                    val url = conn.path.toUri()
-                    // Base64 编码认证信息
-                    val credentials = conn.user + ":" + conn.pass
-                    val auth = "Basic " + Base64.encodeToString(
-                        credentials.toByteArray(),
-                        Base64.NO_WRAP
-                    )
-                    val headers = mapOf("Authorization" to auth)
-                    mPlayer.setDataSource(mContext!!, url, headers)
-                }else if(conn.path.startsWith("smb")){
-                    val smbUrl = conn.path
-                    // 1. 创建SmbFile对象
-                    try {
+    fun startPlay() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                isMediaPlaying = false
+                isMediaPrepared = false
+                mPlayer.reset()
+                if (playUrl != null) {
+                    mPlayer.setDataSource(playUrl)
+                }
+                if (playUri != null) {
+                    mPlayer.setDataSource(mContext!!, playUri!!)
+                }
+                webdavResource?.let { conn ->
+                    if (conn.path.startsWith("http")) {
+                        val url = conn.path.toUri()
+                        // Base64 编码认证信息
+                        val credentials = conn.user + ":" + conn.pass
+                        val auth = "Basic " + Base64.encodeToString(
+                            credentials.toByteArray(),
+                            Base64.NO_WRAP
+                        )
+                        val headers = mapOf("Authorization" to auth)
+                        mPlayer.setDataSource(mContext!!, url, headers)
+                    } else if (conn.path.startsWith("smb")) {
+                        val smbUrl = conn.path
+                        // 1. 创建SmbFile对象
+
                         // 创建Uri
 //                        val uri = "content://com.jhkj.videoplayer.smbProvider/file".toUri()
 //                            .buildUpon()
@@ -330,28 +382,34 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
 //                        mPlayer.setDataSource(mContext!!, uri)
 
                         //  2. 获取文件输入流
-                        val username = conn.user
-                        val context: CIFSContext = if (!TextUtils.isEmpty(username)) {
-                            // 如果域为空，可以传入空字符串
-                            val auth = NtlmPasswordAuthenticator(
-                                null,
-                                username, conn.pass,
-                                NtlmPasswordAuthenticator.AuthenticationType.USER
-                            )
-                            SingletonContext.getInstance().withCredentials(auth)
-                        } else {
-                            SingletonContext.getInstance().withGuestCrendentials()
-                        }
-                        val smbFile = SmbFile(smbUrl, context)
-                        val randomSmbFile = SmbRandomAccessFile(smbFile, "r")
+
+                        try {
+                            val username = conn.user
+                            val context: CIFSContext = if (!TextUtils.isEmpty(username)) {
+                                // 如果域为空，可以传入空字符串
+                                val auth = NtlmPasswordAuthenticator(
+                                    null,
+                                    username, conn.pass,
+                                    NtlmPasswordAuthenticator.AuthenticationType.USER
+                                )
+                                SingletonContext.getInstance().withCredentials(auth)
+                            } else {
+                                SingletonContext.getInstance().withGuestCrendentials()
+                            }
+                            smbFile = SmbFile(smbUrl, context)
+                            smbRaf1 = SmbRandomAccessFile(smbFile, "r")
+                            smbRaf2 = SmbRandomAccessFile(smbFile, "r")
 //                        // 2. 获取文件输入流
-//                      mCurrentDataSource = BufferedSMBDataSource2(randomSmbFile, smbFile.length())
-                        mCurrentDataSource = StableSMBDataSource(randomSmbFile, smbFile.length())
-                        val cacheFile = getCacheFile(conn.path)
+                            mCurrentDataSource = BufferedSMBDataSource2(
+                                smbRaf1, smbRaf2,
+                                smbFile?.length() ?: 0
+                            )
+//                        mCurrentDataSource = StableSMBDataSource(randomSmbFile, smbFile.length())
+                            val cacheFile = getCacheFile(conn.path)
 //                        val cacheDir = mContext!!.externalCacheDir
 //                        val smbDataSource = SMBDataSourceRaf2(cacheFile,randomSmbFile, smbFile.length())
 
-                        //开启指向本地127.0.0.1的服务器
+                            //开启指向本地127.0.0.1的服务器
 //                        val streamer = Streamer.getInstance()
 //                        val filePath = smbUrl.toUri().path ?: ""
 //                        streamer.setStreamSrc(smbFile, null)
@@ -361,23 +419,25 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
 //                            .getHttpUrl(smbUrl,conn.user,conn.pass)
 //                        mPlayer.setDataSource(proxyUrl) // 播放器现在访问的是本地 AndServer
 
-                        // 3. 关键步骤：将文件描述符（FD）设置为MediaPlayer的数据源
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            // 3. 关键步骤：将文件描述符（FD）设置为MediaPlayer的数据源
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 //                            mPlayer.setDataSource(mContext!!,uri)
-                            mPlayer.setDataSource(mCurrentDataSource)
+                                mPlayer.setDataSource(mCurrentDataSource)
+                            }
+                        } catch (e: SmbException) {
+                            e.printStackTrace()
                         }
-                    }catch (e: SmbException){
-                        e.printStackTrace()
+
                     }
                 }
+                bufferingListener?.bufferingStart()
+                isBuffering = true
+                mPlayer.prepareAsync()
+            } catch (e: IOException) {
+                isBuffering = false
+                playStateListener?.playError()
+                Log.e(TAG, "MediaPlayer prepare: $e")
             }
-            bufferingListener?.bufferingStart()
-            isBuffering = true
-            mPlayer.prepareAsync()
-        }catch (e:IOException){
-            isBuffering = false
-            playStateListener?.playError()
-            Log.e(TAG, "MediaPlayer prepare: $e")
         }
     }
 
@@ -401,80 +461,80 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         return cacheFile
     }
 
-    fun pausePlay(){
-        if(!isMediaPrepared || !isMediaPlaying)return
+    fun pausePlay() {
+        if (!isMediaPrepared || !isMediaPlaying) return
         try {
             mPlayer.pause()
             playStateListener?.playPaused()
             isMediaPlaying = false
-        }catch (e:Exception){
+        } catch (e: Exception) {
             playStateListener?.playError()
             Log.e(TAG, "MediaPlayer pause: $e")
         }
     }
 
-    fun resumePlay(){
-        if(!isMediaPrepared || isMediaPlaying)return
+    fun resumePlay() {
+        if (!isMediaPrepared || isMediaPlaying) return
         try {
             mPlayer.start()
             isMediaPlaying = true
             vProgressTime = mPlayer.currentPosition
-            playStateListener?.playStarted(vProgressTime,vDuration)
-        }catch (e:Exception){
+            playStateListener?.playStarted(vProgressTime, vDuration)
+        } catch (e: Exception) {
             playStateListener?.playError()
             Log.e(TAG, "MediaPlayer pause: $e")
         }
     }
 
 
-    fun stopPlay(){
-        if(!isMediaPrepared)return
+    fun stopPlay() {
+        if (!isMediaPrepared) return
         try {
             mPlayer.stop()
             playStateListener?.playStopped()
             isMediaPlaying = false
             isMediaPrepared = false
-        }catch (e:Exception){
+        } catch (e: Exception) {
             playStateListener?.playError()
             Log.e(TAG, "MediaPlayer pause: $e")
         }
     }
 
-    fun releasePlay(){
+    fun releasePlay() {
         try {
             releaseDataSource()
             mPlayer.release()
             isMediaPlaying = false
             isMediaPrepared = false
             isReleased = true
-        }catch (e:Exception){
+        } catch (e: Exception) {
             Log.e(TAG, "MediaPlayer pause: $e")
         }
     }
 
-    fun muteVoice(){
-        if(isVolumeMuted || !isMediaPrepared)return
-        mPlayer.setVolume(0f,0f)
+    fun muteVoice() {
+        if (isVolumeMuted || !isMediaPrepared) return
+        mPlayer.setVolume(0f, 0f)
         isVolumeMuted = true
         volumeStateListener?.volumeMuted()
     }
 
-    fun resumeVoice(){
-        if(!isVolumeMuted || !isMediaPrepared)return
-        mPlayer.setVolume(1f,1f)
+    fun resumeVoice() {
+        if (!isVolumeMuted || !isMediaPrepared) return
+        mPlayer.setVolume(1f, 1f)
         isVolumeMuted = false
         volumeStateListener?.volumeResumed()
     }
 
-    fun isPlaying():Boolean{
+    fun isPlaying(): Boolean {
         return isMediaPlaying
     }
 
-    fun isBuffering():Boolean{
+    fun isBuffering(): Boolean {
         return isBuffering
     }
 
-    fun isSpeedSupport():Boolean {
+    fun isSpeedSupport(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             true
         } else {
@@ -482,7 +542,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         }
     }
 
-    fun setPlaybackSpeed(speed:Float){
+    fun setPlaybackSpeed(speed: Float) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             try {
                 val params = mPlayer.playbackParams
@@ -490,37 +550,37 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
                 params.speed = speed
                 params.pitch = 1.0f // 保持原始音调
                 mPlayer.playbackParams = params
-            } catch (e:Exception) {
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
     }
 
-    fun isPrepared():Boolean{
+    fun isPrepared(): Boolean {
         return isMediaPrepared
     }
 
-    fun isMuted():Boolean{
+    fun isMuted(): Boolean {
         return isVolumeMuted
     }
 
-    fun getCurrentPlayPos():Int{
-        if(!isMediaPrepared)return 0
+    fun getCurrentPlayPos(): Int {
+        if (!isMediaPrepared) return 0
         return mPlayer.currentPosition
     }
 
-    fun getDuration():Int{
-        if(!isMediaPrepared)return 0
+    fun getDuration(): Int {
+        if (!isMediaPrepared) return 0
         return mPlayer.duration
     }
 
 
-    fun seekTo(percent:Float){
-        if(isReleased)return
-        if(!isMediaPrepared){
+    fun seekTo(percent: Float) {
+        if (isReleased) return
+        if (!isMediaPrepared) {
             startPlay()
             lastSeekTo = percent
-        }else {
+        } else {
             try {
                 bufferingListener?.bufferingStart()
                 isBuffering = true
@@ -542,33 +602,32 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         }
     }
 
-    fun forwardOrBackward(seconds:Int,forward: Boolean){
-        if(!isMediaPrepared)return
+    fun forwardOrBackward(seconds: Int, forward: Boolean) {
+        if (!isMediaPrepared) return
         try {
             bufferingListener?.bufferingStart()
             isBuffering = true
             val duration = mPlayer.duration  //获取时间的毫秒数
             val curPos = mPlayer.currentPosition
-            val afterPos = if(forward){
-                min(curPos+seconds*1000,duration)
-            }else{
-                max(0,curPos - seconds*1000)
+            val afterPos = if (forward) {
+                min(curPos + seconds * 1000, duration)
+            } else {
+                max(0, curPos - seconds * 1000)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                mPlayer.seekTo(afterPos.toLong(),MediaPlayer.SEEK_CLOSEST)
-            }else{
+                mPlayer.seekTo(afterPos.toLong(), MediaPlayer.SEEK_CLOSEST)
+            } else {
                 mPlayer.seekTo(afterPos)
             }
             resumePlay()
-        }catch (e:IllegalStateException){
+        } catch (e: IllegalStateException) {
             isBuffering = false
             e.printStackTrace()
-        }catch (e2:IllegalArgumentException){
+        } catch (e2: IllegalArgumentException) {
             isBuffering = false
             e2.printStackTrace()
         }
     }
-
 
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
@@ -588,7 +647,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         GLES30.glVertexAttribPointer(uPosHandle, 3, GLES30.GL_FLOAT, false, 12, mPosBuffer)
         GLES30.glVertexAttribPointer(aTexHandle, 2, GLES30.GL_FLOAT, false, 8, mTexBuffer)
         mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "textureTransform")
-        mTexRotateMatrixHandle = GLES20.glGetUniformLocation(mProgram,"uTextRotateMatrix")
+        mTexRotateMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uTextRotateMatrix")
 
         initMediaPlayer()
     }
@@ -602,14 +661,14 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
     override fun onDrawFrame(gl: GL10?) {
         GLES30.glEnable(GLES20.GL_DEPTH_TEST)
         GLES30.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
-        GLES30.glViewport(0,0,screeW,screenH)
+        GLES30.glViewport(0, 0, screeW, screenH)
 
         GLES30.glUseProgram(mProgram)
         // 将前面计算得到的mMVPMatrix(frustumM setLookAtM 通过multiplyMM 相乘得到的矩阵) 传入vMatrix中，与顶点矩阵进行相乘
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, true, mMVPMatrix, 0)
         surfaceTexture.updateTexImage()
 
-        if(isPlaying()) {
+        if (isPlaying()) {
             vProgressTime = mPlayer.currentPosition
             playStateListener?.playOnGoing(vProgressTime, vDuration)
         }
@@ -621,7 +680,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
 //        GLES30.glBindVertexArray(vao.array()[0])
         GLES30.glEnableVertexAttribArray(uPosHandle)
         GLES30.glEnableVertexAttribArray(aTexHandle)
-        GLES30.glDrawArrays(GLES30.GL_TRIANGLES,0,6)
+        GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 6)
         GLES30.glDisableVertexAttribArray(uPosHandle)
         GLES30.glDisableVertexAttribArray(aTexHandle)
 //        GLES30.glBindVertexArray(0)
@@ -632,7 +691,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
         private const val TAG = "MediaGLRenderer"
     }
 
-    fun release(){
+    fun release() {
         GLES30.glDeleteProgram(mProgram)
         stopPlay()
         releasePlay()
@@ -640,56 +699,56 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
 
 
     //改变视频的尺寸自适应
-    private fun changeVideoSize(screenW:Int,screenH:Int) {
+    private fun changeVideoSize(screenW: Int, screenH: Int) {
         var finalVideoW = 0
         var finalVideoH = 0
         // 视频已经填满屏幕，计算视频相对于屏幕的缩放比例
-        val srw = 1f/(screenW*1f / vWidth)
-        val srh = 1f/(screenH*1f / vHeight)
-        if(screenW > screenH){  //横屏
+        val srw = 1f / (screenW * 1f / vWidth)
+        val srh = 1f / (screenH * 1f / vHeight)
+        if (screenW > screenH) {  //横屏
             //计算视频高的与屏幕的高的比例
-            var ratio = screenH*1f / vHeight
+            var ratio = screenH * 1f / vHeight
             val scaleVideoW = vWidth * ratio
-            if(scaleVideoW > screenW){
-                ratio = screenW*1f / vWidth
+            if (scaleVideoW > screenW) {
+                ratio = screenW * 1f / vWidth
                 finalVideoW = screenW
                 finalVideoH = (vHeight * ratio).toInt()
-            }else{
+            } else {
                 finalVideoW = scaleVideoW.toInt()
                 finalVideoH = screenH
             }
-            val offsetX = (screenW - finalVideoW)/2f
-            val offsetY = (screenH - finalVideoH)/2f
-            Matrix.translateM(mMVPMatrix,0,offsetX,offsetY,1f)
-            Matrix.scaleM(mMVPMatrix,0,ratio*srw,ratio*srh,1f)
-        }else{  //竖屏
-            val ratioW = screenW*1f / vWidth
-            val ratioH = screenH*1f / vHeight
+            val offsetX = (screenW - finalVideoW) / 2f
+            val offsetY = (screenH - finalVideoH) / 2f
+            Matrix.translateM(mMVPMatrix, 0, offsetX, offsetY, 1f)
+            Matrix.scaleM(mMVPMatrix, 0, ratio * srw, ratio * srh, 1f)
+        } else {  //竖屏
+            val ratioW = screenW * 1f / vWidth
+            val ratioH = screenH * 1f / vHeight
             var ratio = ratioW
-            if(vWidth >= vHeight){
+            if (vWidth >= vHeight) {
                 finalVideoW = (vWidth * ratioW).toInt()
                 finalVideoH = (vHeight * ratioW).toInt()
-            }else{
+            } else {
                 finalVideoW = (vWidth * ratioH).toInt()
                 finalVideoH = screenH
                 ratio = ratioH
-                if(finalVideoW > screenW){
+                if (finalVideoW > screenW) {
                     finalVideoW = screenW
                     finalVideoH = (vHeight * ratioW).toInt()
                     ratio = ratioW
                 }
             }
-            val offsetX = (screenW - finalVideoW)/2f
-            val offsetY = (screenH - finalVideoH)/2f
-            Matrix.translateM(mMVPMatrix,0,offsetX,offsetY,0f)
-            Matrix.scaleM(mMVPMatrix,0,ratio*srw,ratio*srh,1f)
+            val offsetX = (screenW - finalVideoW) / 2f
+            val offsetY = (screenH - finalVideoH) / 2f
+            Matrix.translateM(mMVPMatrix, 0, offsetX, offsetY, 0f)
+            Matrix.scaleM(mMVPMatrix, 0, ratio * srw, ratio * srh, 1f)
         }
     }
 
     private fun calculateVideoPosition() {
-        if(vWidth == 0 || vHeight == 0)return
+        if (vWidth == 0 || vHeight == 0) return
         Matrix.setIdentityM(mMVPMatrix, 0)
-        changeVideoSize(screeW,screenH)
+        changeVideoSize(screeW, screenH)
     }
 
 }

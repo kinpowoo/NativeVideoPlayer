@@ -51,6 +51,7 @@ dependencies {
     //腾讯高效底层 protobuf 缓存库 , v1.3.14 是LTS长期支持版本，已兼容16kb page size
     implementation "com.tencent:mmkv:1.3.14"
 
+    implementation "org.jetbrains.kotlin:kotlin-parcelize-runtime:$kotlin_version"
     def version = "3.0.0"
     implementation "com.github.codyer.ElegantBus:ipc-aidl:$version" // 跨进程时使用（方式2：aidl 实现，已经包含 core）
 

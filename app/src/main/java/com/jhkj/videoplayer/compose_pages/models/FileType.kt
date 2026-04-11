@@ -2,10 +2,19 @@ package com.jhkj.videoplayer.compose_pages.models
 
 import android.content.Context
 import android.content.Intent
+import android.text.TextUtils
+import android.view.View
+import androidx.core.net.toUri
+import androidx.lifecycle.lifecycleScope
+import com.jhkj.gl_player.gsy_player.GsyPlayActivity
+import com.jhkj.gl_player.gsy_player.PlayTVActivity
+import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.videoplayer.R
 import com.jhkj.videoplayer.player.VideoPlayerActivity
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import com.thegrizzlylabs.sardineandroid.DavResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 object FileType{
@@ -71,10 +80,37 @@ object FileType{
         }
     }
 
+
+    private fun getFileUrl(fileInfo:FileItem):String{
+        if(fileInfo.fileType == 0){
+            return fileInfo.path
+        }else{ // if(fileInfo.fileType == 1)
+            val baseURL = fileInfo.path
+            val username = fileInfo.credentialUser
+            val pass = fileInfo.credentialPass
+            if(!TextUtils.isEmpty(username)){
+                if(fileInfo.fileType == 1) {
+                    val noHttp = baseURL.split("://")
+                    return String.format("http://%s:%s@%s",
+                        username,pass,noHttp.last())
+                }else if(fileInfo.fileType == 2) {
+                    val noSmb = baseURL.split("://")
+                    return String.format("smb://%s:%s@%s",
+                        username,pass,noSmb.last())
+                }
+            }
+        }
+        return ""
+    }
+
     fun doLocalFileOpenAction(context: Context,file: FileItem){
         val name:String = file.fileName
-        val resPath = file.path
         if(isMovie(name)){
+//            val intent = Intent(context, GsyPlayActivity::class.java)
+//            val path = getFileUrl(file)
+//            intent.putExtra("file_url",path)
+//            intent.putExtra("file_name",file.fileName)
+
             val intent = Intent(context, VideoPlayerActivity::class.java)
             intent.putExtra("fileItem",file)
             context.startActivity(intent)
