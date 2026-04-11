@@ -7,33 +7,26 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.Stack;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import jcifs.smb.SmbException;
 import jcifs.smb.SmbRandomAccessFile;
 
 @SuppressLint("NewApi")
 public class SMBDataSourceRaf extends MediaDataSource {
-    private static final int BUFFER_SIZE = 600 * 1024; // 1024KB缓冲块
-    private final ByteBuffer byteBuf = ByteBuffer.allocate(BUFFER_SIZE);
-    private final byte[] bufArr = new byte[BUFFER_SIZE];
+    private static final int BUFFER_SIZE = 10 * 1024 * 1024; // 1024KB缓冲块
     private SmbRandomAccessFile mFile; // must not Main UI thread.
     private long mFileSize;
     private RandomAccessFile tmpFileReader;
     private RandomAccessFile tmpFileWriter;
-    private FileChannel writeChannel;
     private final AtomicBoolean isStop = new AtomicBoolean(false);
     private Thread writeThread = null;
-    // 无界队列
-    private final BlockingQueue<Long> unboundedQueue = new LinkedBlockingQueue<>();
-    private final ExecutorService cacheThread = Executors.newSingleThreadExecutor();
+    private final byte[] tmp = new byte[BUFFER_SIZE];
+
+    private final Object mux = new Object();
+    private final AtomicLong readPos = new AtomicLong(0);
+    private final AtomicLong readPosEnd = new AtomicLong(0);
 
     public SMBDataSourceRaf(File cacheFile, SmbRandomAccessFile smbFile, long size) throws SmbException {
         this.mFile = smbFile;
@@ -47,8 +40,7 @@ public class SMBDataSourceRaf extends MediaDataSource {
         }
         try {
             tmpFileReader = new RandomAccessFile(cacheFile,"r");
-            tmpFileWriter = new RandomAccessFile(cacheFile,"w");
-            writeChannel = tmpFileReader.getChannel();
+            tmpFileWriter = new RandomAccessFile(cacheFile,"rw");
             writeThread = new Thread(this::writeUnder);
             writeThread.start();
         } catch (FileNotFoundException e) {
@@ -63,63 +55,61 @@ public class SMBDataSourceRaf extends MediaDataSource {
         if (size <= 0) {
             return 0;
         }
-        try {
-            if(!unboundedQueue.isEmpty()) {
-                Long peek = unboundedQueue.peek();
-                if(peek != null && peek != position) {
-                    unboundedQueue.put(position);
-                }
-            }else{
-                unboundedQueue.put(position);
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (NullPointerException e2) {
-            e2.printStackTrace();
-        }
+        if(position >= readPos.get() && (position+size) <= readPosEnd.get()){
 
+        }else{
+            readPos.set(position);
+            try {
+                mux.wait(2000);
+            } catch (InterruptedException e) {
+                throw new IOException(e);
+            }
+        }
         if(tmpFileReader != null) {
-            if (tmpFileReader.getFilePointer() != position){
+            if (tmpFileReader.getFilePointer() != position) {
                 tmpFileReader.seek(position);
             }
-            int readLen = tmpFileReader.read(buffer, offset , size);
-            return readLen;
-        }else{
-            if (mFile.getFilePointer() != position){
-                mFile.seek(position);
-            }
-            return mFile.read(buffer, offset , size);
+            int readLen = tmpFileReader.read(buffer, offset, size);
+            if(readLen >= 0) return readLen;
         }
+        return 1;
     }
 
     private void readBuf(long position) throws IOException {
-        if(writeChannel != null) {
-            if (mFile.getFilePointer() != position) {
-                mFile.seek(position);
-            }
-            int bytesRead;
-//            byteBuf.clear();
-            byte[] tmp = new byte[BUFFER_SIZE];
-            bytesRead = mFile.read(tmp);
-            if(bytesRead != -1){
-                tmpFileWriter.write(tmp,0,bytesRead);
-//                byteBuf.put(bufArr,0,bytesRead);
-//                byteBuf.flip();
-//                writeChannel.position(position);
-//                int writeLen = writeChannel.write(byteBuf);
-//                if(writeLen2 != -1){
-//
-//                }
-            }
-        }
+
     }
 
     //在子线程写入
     private void writeUnder(){
         try {
             while (!isStop.get()) {
-                long pos = unboundedQueue.take();
-                readBuf(pos);
+                if(tmpFileWriter != null) {
+                    long lastPos = readPos.get();
+                    mFile.seek(lastPos);
+                    tmpFileWriter.seek(lastPos);
+                    int bytesRead;
+                    long byteTotalRead = 0;
+                    while((bytesRead = mFile.read(tmp,0,BUFFER_SIZE)) != -1) {
+                        tmpFileWriter.write(tmp, 0, bytesRead);
+                        byteTotalRead += bytesRead;
+                        readPosEnd.set(lastPos+byteTotalRead);
+                        mux.notify();
+                        if(lastPos != readPos.get()){
+                            break;
+                        }
+                        Thread.sleep(10);
+                    }
+                }
+                Thread.sleep(10);
+            }
+
+            if(tmpFileReader != null){
+                tmpFileReader.close();
+                tmpFileReader = null;
+            }
+            if(tmpFileWriter != null){
+                tmpFileWriter.close();
+                tmpFileWriter = null;
             }
         }catch (Exception e){
             e.printStackTrace();
@@ -134,22 +124,10 @@ public class SMBDataSourceRaf extends MediaDataSource {
     @Override
     public void close() throws IOException {
         mFileSize = 0;
-        isStop.set(true);
+//        isStop.set(true);
         if (mFile != null) {
             mFile.close();
             mFile = null;
-        }
-        if(tmpFileReader != null){
-            tmpFileReader.close();
-            tmpFileReader = null;
-        }
-        if(writeChannel != null){
-            writeChannel.close();
-            writeChannel = null;
-        }
-        if(tmpFileWriter != null){
-            tmpFileWriter.close();
-            tmpFileWriter = null;
         }
         if(writeThread != null){
             try {
@@ -159,6 +137,5 @@ public class SMBDataSourceRaf extends MediaDataSource {
             }
             writeThread = null;
         }
-        cacheThread.shutdown();
     }
 }
