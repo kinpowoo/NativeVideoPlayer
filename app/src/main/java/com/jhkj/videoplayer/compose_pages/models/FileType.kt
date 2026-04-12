@@ -10,6 +10,9 @@ import com.jhkj.gl_player.gsy_player.GsyPlayActivity
 import com.jhkj.gl_player.gsy_player.PlayTVActivity
 import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.videoplayer.R
+import com.jhkj.videoplayer.components.FullScreenDialog
+import com.jhkj.videoplayer.databinding.MusicPlayerLayoutBinding
+import com.jhkj.videoplayer.player.MusicPlayerActivity
 import com.jhkj.videoplayer.player.VideoPlayerActivity
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import com.thegrizzlylabs.sardineandroid.DavResource
@@ -115,9 +118,18 @@ object FileType{
             intent.putExtra("fileItem",file)
             context.startActivity(intent)
         }else if(isMusic(name)){
-
+            val intent = Intent(context, MusicPlayerActivity::class.java)
+            intent.putExtra("fileItem",file)
+            context.startActivity(intent)
         }else if(isPhoto(name)){
-
+            val dialog = FullScreenDialog(context)
+            if(file.fileType == 0) {
+                dialog.loadFilePath(file.path)
+            }else{
+                val url = getFileUrl(file)
+                dialog.loadUrl(url)
+            }
+            dialog.show()
         }else if(isText(name)){
 
         }else if(isBook(name)){
@@ -198,10 +210,12 @@ object FileType{
 
     fun isPhoto(name:String): Boolean{
         val lower = name.lowercase()
-        return lower.endsWith(".png") ||
-                lower.endsWith(".jpg") ||
-                lower.endsWith(".jpeg") ||
-                lower.endsWith(".webp")
+        return lower.endsWith(".png",true) ||
+                lower.endsWith(".jpg",true) ||
+                lower.endsWith(".jpeg",true) ||
+                lower.endsWith(".webp",true) ||
+                lower.endsWith(".dmg",true) ||
+                lower.endsWith(".raw",true)
     }
 
     fun isGif(name:String): Boolean{

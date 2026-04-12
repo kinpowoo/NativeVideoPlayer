@@ -300,22 +300,6 @@ public class BleForegroundService extends Service implements ServerCallback, Ser
                 Log.d(TAG, "WakeLock acquired");
             }
         }
-        
-        // 获取WiFi锁（保持WiFi连接）
-        WifiManager wifiManager = (WifiManager) getApplicationContext()
-            .getSystemService(Context.WIFI_SERVICE);
-        if (wifiManager != null) {
-            wifiLock = wifiManager.createWifiLock(
-                WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-                "WiFiDirect:WifiLock"
-            );
-            wifiLock.setReferenceCounted(false);
-            
-            if (!wifiLock.isHeld()) {
-                wifiLock.acquire();
-                Log.d(TAG, "WifiLock acquired");
-            }
-        }
     }
     
     /**
