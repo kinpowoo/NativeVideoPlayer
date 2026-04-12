@@ -61,6 +61,7 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection,BufferingList
 
         binding.dismissBtn.setOnClickListener {
             finish()
+            overridePendingTransition(0, 0)
         }
         audioHelper = AudioVolumeHelper(this)
         val maxVol = audioHelper?.getMaxVolume(AudioManager.STREAM_MUSIC) ?: 15

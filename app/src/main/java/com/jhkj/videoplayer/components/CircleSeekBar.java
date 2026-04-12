@@ -25,9 +25,9 @@ public class CircleSeekBar extends View {
     // 属性
     private int startAngle = 280;  // 起始角度
     private int endAngle = 260;    // 结束角度
-    private float strokeWidth = dp2px(0.7f);    // 背景线宽
-    private float progressWidth = dp2px(0.8f);  // 进度线宽
-    private float thumbSize = dp2px(2f);        // 滑块半径
+    private float strokeWidth = dp2px(1f);    // 背景线宽
+    private float progressWidth = dp2px(1.2f);  // 进度线宽
+    private float thumbSize = dp2px(4f);        // 滑块半径
 
     // 触摸相关
     private float touchExtension = dp2px(10f);  // 触摸扩展区域，增加20dp

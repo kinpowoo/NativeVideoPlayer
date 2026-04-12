@@ -119,6 +119,7 @@ object FileType{
             context.startActivity(intent)
         }else if(isMusic(name)){
             val intent = Intent(context, MusicPlayerActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
             intent.putExtra("fileItem",file)
             context.startActivity(intent)
         }else if(isPhoto(name)){
