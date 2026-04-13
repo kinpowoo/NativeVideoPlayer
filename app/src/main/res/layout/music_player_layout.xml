@@ -3,14 +3,24 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/content_container"
-    android:background="#90000000"
-    android:fitsSystemWindows="true"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-    <ImageView
+    <eightbitlab.com.blurview.BlurTarget
         android:id="@+id/blur_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
+
+    <eightbitlab.com.blurview.BlurView
+        android:id="@+id/blur_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/toolbar"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
 
     <ImageView
         android:id="@+id/dismiss_btn"
@@ -20,7 +30,8 @@
         android:layout_marginTop="5dp"
         android:src="@drawable/ic_down"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
     <TextView
         android:id="@+id/song_name"
@@ -35,7 +46,8 @@
         android:textSize="14sp"
         app:layout_constraintEnd_toStartOf="@+id/more_opt_btn"
         app:layout_constraintStart_toEndOf="@+id/dismiss_btn"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
     <ImageView
         android:id="@+id/more_opt_btn"
@@ -49,7 +61,9 @@
         android:src="@drawable/ic_more_vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:tint="@color/white" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ImageView
         android:id="@+id/cover"
@@ -61,7 +75,7 @@
         app:layout_constraintDimensionRatio="h,1:1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/song_name" />
+        app:layout_constraintTop_toBottomOf="@+id/toolbar" />
 
 
     <ImageView
@@ -104,8 +118,8 @@
         android:textColor="@android:color/white"
         android:textSize="14sp"
         android:textAlignment="center"
-        app:layout_constraintEnd_toStartOf="@+id/more_opt_btn"
-        app:layout_constraintStart_toEndOf="@+id/dismiss_btn"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/voice_btn" />
 
     <ImageView

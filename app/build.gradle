@@ -56,6 +56,8 @@ dependencies {
     implementation "com.github.codyer.ElegantBus:ipc-aidl:$version" // 跨进程时使用（方式2：aidl 实现，已经包含 core）
 
 
+    // 或Kotlin版本
+    implementation 'androidx.palette:palette-ktx:1.0.0'
     implementation "com.github.chrisbanes:PhotoView:2.3.0"
     implementation 'com.github.Dimezis:BlurView:version-3.2.0'
 //    implementation 'com.github.florent37:glidepalette:2.1.2'

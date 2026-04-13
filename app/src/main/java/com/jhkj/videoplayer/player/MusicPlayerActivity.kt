@@ -6,6 +6,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Shader
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.GradientDrawable
 import android.media.AudioManager
 import android.media.MediaDataSource
 import android.media.MediaMetadataRetriever
@@ -18,6 +23,7 @@ import android.text.TextUtils
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.isVisible
@@ -31,6 +37,8 @@ import com.jhkj.gl_player.util.ImmersiveStatusBarUtils
 import com.jhkj.videoplayer.R
 import com.jhkj.videoplayer.databinding.MusicPlayerLayoutBinding
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
+import eightbitlab.com.blurview.BlurTarget
+import eightbitlab.com.blurview.RenderScriptBlur
 import jcifs.CIFSContext
 import jcifs.context.SingletonContext
 import jcifs.smb.NtlmPasswordAuthenticator
@@ -42,6 +50,11 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.Locale
+import androidx.core.graphics.drawable.toDrawable
+import androidx.palette.graphics.Palette
+import com.jhkj.gl_player.util.DensityUtil
+import com.jhkj.gl_player.util.StatusBarTool
+import androidx.core.graphics.toColorInt
 
 
 class MusicPlayerActivity : AppCompatActivity(), ServiceConnection,BufferingListener,PlayStateListener{
@@ -63,6 +76,11 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection,BufferingList
             finish()
             overridePendingTransition(0, 0)
         }
+        val statusHeight = StatusBarTool.getStatusBarHeight(this)
+        val param = binding.toolbar.layoutParams as? ConstraintLayout.LayoutParams
+        param?.topMargin = statusHeight
+        binding.toolbar.layoutParams = param
+
         audioHelper = AudioVolumeHelper(this)
         val maxVol = audioHelper?.getMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
         val curVol = audioHelper?.getCurrentVolume(AudioManager.STREAM_MUSIC) ?: 0
@@ -149,7 +167,60 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection,BufferingList
                     binding.songName.text = title
                     cover?.let { coverBitmap ->
                         binding.cover.setImageBitmap(coverBitmap)
+                        val height = DensityUtil.getScreenHeight(this@MusicPlayerActivity)
+                        withContext(Dispatchers.IO){
+                            val bg = SpotlightGradientGenerator.createSpotlightGradient(
+                                coverBitmap,this@MusicPlayerActivity
+                            )
+                            runOnUiThread {
+                                binding.blurBg.background = bg
+                            }
+//                            Palette.from(coverBitmap).generate { palette ->
+//                                // 获取多种颜色样本
+//                                // ?: "#FF4081".toColorInt()
+//                                // ?: "#3F51B5".toColorInt()
+//                                // ?: "#303F9F".toColorInt()
+//                                // ?: "#FF9800".toColorInt()
+//                                //?: "#795548".toColorInt()
+//                                val vibrant = palette?.vibrantSwatch?.rgb
+//                                val lightVibrant = palette?.lightVibrantSwatch?.rgb
+//                                val darkVibrant = palette?.darkVibrantSwatch?.rgb
+//                                val muted = palette?.mutedSwatch?.rgb
+//                                val darkMuted = palette?.darkMutedSwatch?.rgb
+//                                val colorArr = arrayListOf<Int>()
+//                                vibrant?.let{ colorArr.add(it) }
+//                                lightVibrant?.let{ colorArr.add(it) }
+//                                darkVibrant?.let{ colorArr.add(it) }
+//                                muted?.let{ colorArr.add(it) }
+//                                darkMuted?.let{ colorArr.add(it) }
+//
+//                                // 创建颜色数组
+//                                //颜色排序：按颜色明度或饱和度排序，使渐变更自然：
+////                                val sortedColors = colorArr.sortedBy {
+////                                    val hsv = FloatArray(3)
+////                                    Color.colorToHSV(it, hsv)
+////                                    hsv[2]  // 按明度排序
+////                                }.toIntArray()
+//                                val sortedColors = colorArr.toIntArray()
+//
+//                                val gradientDrawable = PaletteGradientDrawable(sortedColors)
+//                                runOnUiThread{
+//                                    binding.blurBg.background = gradientDrawable
+//                                }
+//                            }
+                        }
+
                     }
+                    if(cover == null){
+                        withContext(Dispatchers.IO) {
+                            val bg = SpotlightGradientGenerator.createDefaultRadialGradient(
+                                this@MusicPlayerActivity)
+                            runOnUiThread {
+                                binding.blurBg.background = bg
+                            }
+                        }
+                    }
+
                     val info = String.format(Locale.US,"%s|%s|%.0fkbps",album,artist,bitrate/1000f)
                     binding.trackInfo.text = info
                 }
@@ -179,6 +250,8 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection,BufferingList
                     binding.songName.text = title
                     cover?.let { coverBitmap ->
                         binding.cover.setImageBitmap(coverBitmap)
+                        binding.blurView.setupWith(binding.blurBg)
+                            .setBlurRadius(3f)
                     }
                     val info = String.format(Locale.US,"%s|%s|%.0fkbps",album,artist,bitrate/1000f)
                     binding.trackInfo.text = info

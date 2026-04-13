@@ -8,6 +8,13 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_small_caption">#F2F2F2</color>
+    <color name="text_popup">#eeeeee</color>
+    <color name="text_menu">#F0FFFFFF</color>
+    <color name="text_secondary">#EAEAEA</color>
+    <color name="text_third">#CCCCCC</color>
     <!-- 背景色系 -->=
     <color name="primary_bg">#0C0B0E</color>
     <color name="primary_accent_bg">#BF24252B</color>
