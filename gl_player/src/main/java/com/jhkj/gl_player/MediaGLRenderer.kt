@@ -23,6 +23,8 @@ import android.util.Log
 import android.view.Surface
 import androidx.core.net.toUri
 import com.jhkj.gl_player.data_source_imp.BufferedSMBDataSource2
+import com.jhkj.gl_player.data_source_imp.EnhancedSMBDataSource
+import com.jhkj.gl_player.data_source_imp.NonBlockingSMBDataSource
 import com.jhkj.gl_player.data_source_imp.StableSMBDataSource
 import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.gl_player.util.GLDataUtil
@@ -345,7 +347,7 @@ class MediaGLRenderer(ctx:Context?,listener: SurfaceTexture.OnFrameAvailableList
                         val randomSmbFile = SmbRandomAccessFile(smbFile, "r")
 //                        // 2. 获取文件输入流
 //                      mCurrentDataSource = BufferedSMBDataSource2(randomSmbFile, smbFile.length())
-                        mCurrentDataSource = StableSMBDataSource(randomSmbFile, smbFile.length())
+                        mCurrentDataSource = NonBlockingSMBDataSource(randomSmbFile, smbFile.length())
                         val cacheFile = getCacheFile(conn.path)
 //                        val cacheDir = mContext!!.externalCacheDir
 //                        val smbDataSource = SMBDataSourceRaf2(cacheFile,randomSmbFile, smbFile.length())
