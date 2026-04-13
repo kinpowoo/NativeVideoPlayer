@@ -16,6 +16,9 @@ import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelUuid;
+
+import com.sin_tech.ble_manager.models.BleDevice;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +32,8 @@ public class BlueDirectDiscovery extends ScanCallback {
 
     private static final String TAG = "BlueDirectDiscovery";
     // 1. 定义你想要过滤的目标服务UUID（例如：串口服务 SPP）
-    private static final String TARGET_UUID = "00001101-0000-1000-8000-00805F9B34FB";
+    ParcelUuid SERVICE_UUID  = ParcelUuid.fromString("0000FFF0-0000-1000-8000-00805F9B34FB");
+    ParcelUuid CHAR_READ_WRITE_UUID  = ParcelUuid.fromString("0000FFF1-0000-1000-8000-00805F9B34FB");
 
     private final WeakReference<Activity> context;
     private final BluetoothAdapter mBluetoothAdapter;
@@ -40,7 +44,7 @@ public class BlueDirectDiscovery extends ScanCallback {
         this.context = context;
         this.callback = callback;
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        registerReceivers();
+//        registerReceivers();
     }
     
     /**
@@ -60,7 +64,8 @@ public class BlueDirectDiscovery extends ScanCallback {
         super.onBatchScanResults(results);
         for(ScanResult res : results){
             if(callback != null){
-                callback.onDeviceFound(res.getDevice());
+                BleDevice bleDevice = new BleDevice(res.getDevice(),res.getRssi());
+                callback.onDeviceFound(bleDevice);
             }
         }
     }
@@ -74,7 +79,8 @@ public class BlueDirectDiscovery extends ScanCallback {
     public void onScanResult(int callbackType, ScanResult result) {
         super.onScanResult(callbackType, result);
         if(callback != null){
-            callback.onDeviceFound(result.getDevice());
+            BleDevice bleDevice = new BleDevice(result.getDevice(),result.getRssi());
+            callback.onDeviceFound(bleDevice);
         }
     }
 
@@ -84,15 +90,11 @@ public class BlueDirectDiscovery extends ScanCallback {
     @SuppressLint("MissingPermission")
     public void startDiscovery() {
         //先停止搜索
-//        List<ScanFilter> filters = new ArrayList<>();
-//        filters.add(new ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(
-//                TARGET_UUID)).build());
-//        mBluetoothAdapter.getBluetoothLeScanner().stopScan(this);
-//        mBluetoothAdapter.getBluetoothLeScanner().startScan(filters,
-//                new ScanSettings.Builder().build(),this);
-        if(mBluetoothAdapter != null){
-            mBluetoothAdapter.startDiscovery();
-        }
+        List<ScanFilter> filters = new ArrayList<>();
+        filters.add(new ScanFilter.Builder().setServiceUuid(SERVICE_UUID).build());
+        mBluetoothAdapter.getBluetoothLeScanner().stopScan(this);
+        mBluetoothAdapter.getBluetoothLeScanner().startScan(filters,
+                new ScanSettings.Builder().build(),this);
         if (callback != null) {
             callback.onScanStart();
         }
@@ -104,12 +106,12 @@ public class BlueDirectDiscovery extends ScanCallback {
      */
     @SuppressLint("MissingPermission")
     public void stopDiscovery() {
-        if(mBluetoothAdapter != null){
-            mBluetoothAdapter.cancelDiscovery();
-        }
 //        if(mBluetoothAdapter != null){
-//            mBluetoothAdapter.getBluetoothLeScanner().stopScan(this);
+//            mBluetoothAdapter.cancelDiscovery();
 //        }
+        if(mBluetoothAdapter != null){
+            mBluetoothAdapter.getBluetoothLeScanner().stopScan(this);
+        }
         if(callback != null) {
             callback.onScanEnd();
         }
@@ -148,7 +150,8 @@ public class BlueDirectDiscovery extends ScanCallback {
                         // 找到目标设备！进行后续处理（如添加到列表）
 //                                Log.d("BluetoothFilter", "找到目标设备: " + device.getName() + " - " + device.getAddress());
                         if(callback != null){
-                            callback.onDeviceFound(device);
+                            BleDevice bleDevice = new BleDevice(device,0);
+                            callback.onDeviceFound(bleDevice);
                         }
                         // 蓝牙搜索是非常消耗系统资源开销的过程，一旦发现了目标感兴趣的设备，可以考虑关闭扫描。
                         mBluetoothAdapter.cancelDiscovery();
@@ -173,7 +176,7 @@ public class BlueDirectDiscovery extends ScanCallback {
      * 发现回调接口
      */
     public interface BlueDiscoveryCallback {
-        void onDeviceFound(BluetoothDevice dev);
+        void onDeviceFound(BleDevice dev);
         void onScanStart();
         void onScanEnd();
     }

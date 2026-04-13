@@ -1,8 +1,5 @@
 package com.jhkj.videoplayer.third_file_framework
 
-import com.sin_tech.ble_manager.ble_tradition.activity.BlueClientActivity
-import com.sin_tech.ble_manager.ble_tradition.activity.BlueServerActivity
-
 
 import android.Manifest
 import android.content.Intent

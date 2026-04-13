@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.sin_tech.ble_manager.databinding.BleDiscoveryItemLayoutBinding
+import com.sin_tech.ble_manager.models.BleDevice
 
 /**
  * @ClassName: CleanRecordAdapter
@@ -15,8 +16,8 @@ import com.sin_tech.ble_manager.databinding.BleDiscoveryItemLayoutBinding
  * @Author: JJ
  * @CreateDate: 2021/10/26 13:54
  */
-class BlueDeviceListAdapter(private val deviceSelect:(BluetoothDevice)->Unit): RecyclerView.Adapter<BlueDeviceListAdapter.DeviceItemHolder>(){
-    private val deviceList = mutableListOf<BluetoothDevice>()
+class BlueDeviceListAdapter(private val deviceSelect:(BleDevice)->Unit): RecyclerView.Adapter<BlueDeviceListAdapter.DeviceItemHolder>(){
+    private val deviceList = mutableListOf<BleDevice>()
     private lateinit var context: Context
     private var selectIndex = -1
 
@@ -31,21 +32,21 @@ class BlueDeviceListAdapter(private val deviceSelect:(BluetoothDevice)->Unit): R
     /**
      * 添加记录
      */
-    fun addDevices(devices:List<BluetoothDevice>){
+    fun addDevices(devices:List<BleDevice>){
         if(devices.isNotEmpty()){
             deviceList.addAll(devices)
         }
         notifyItemRangeInserted(0,devices.size)
     }
 
-    fun appendDevices(device:BluetoothDevice){
+    fun appendDevice(device:BleDevice){
         if(!deviceList.contains(device)) {
             deviceList.add(device)
             notifyItemInserted(deviceList.size)
         }
     }
 
-    fun updateDeviceList(devices:List<BluetoothDevice>){
+    fun updateDeviceList(devices:List<BleDevice>){
         val oldLen = deviceList.size
         deviceList.clear()
         if(oldLen > 0){
@@ -57,7 +58,7 @@ class BlueDeviceListAdapter(private val deviceSelect:(BluetoothDevice)->Unit): R
         }
     }
 
-    fun getSelected(): BluetoothDevice?{
+    fun getSelected(): BleDevice?{
         if(selectIndex < 0 || selectIndex >= deviceList.size)return null
         return deviceList[selectIndex]
     }
@@ -100,7 +101,7 @@ class BlueDeviceListAdapter(private val deviceSelect:(BluetoothDevice)->Unit): R
         val device = deviceList.getOrNull(pos)
         if(device != null){
             holder.deviceName.text = device.name
-            holder.deviceMac.text = device.address
+            holder.deviceMac.text = device.mac
         }else{
             holder.deviceName.text = ""
             holder.deviceMac.text = ""

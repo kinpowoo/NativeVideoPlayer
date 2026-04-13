@@ -1,4 +1,4 @@
-package com.sin_tech.ble_manager.ble_tradition.service;
+package com.sin_tech.ble_manager.ble_client;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -7,12 +7,10 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
@@ -24,48 +22,44 @@ import android.util.Log;
 import androidx.core.app.NotificationCompat;
 
 import com.sin_tech.ble_manager.R;
-import com.sin_tech.ble_manager.ble_tradition.activity.BlueClientActivity;
-import com.sin_tech.ble_manager.ble_tradition.client.BlueDirectClient;
 import com.sin_tech.ble_manager.ble_tradition.protocol.ClientCallback;
 import com.sin_tech.ble_manager.ble_tradition.protocol.FileReceiveCallback;
+import com.sin_tech.ble_manager.models.BleDevice;
 
 import org.jspecify.annotations.Nullable;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.net.InetSocketAddress;
 
 
 /**
  * WiFi Direct 前台服务
  * 保证服务端在后台持续运行
  */
-public class BlueClientService extends Service implements ClientCallback, FileReceiveCallback {
+public class BleClientService extends Service implements ClientCallback, FileReceiveCallback {
 
-    private static final String TAG = "WiFiDirectClient";
+    private static final String TAG = "BleClient";
     private static final int NOTIFICATION_ID = 1001;
-    private static final String CHANNEL_ID = "WiFiDirectChannel";
-    private static final String CHANNEL_NAME = "WiFi Direct Service";
+    private static final String CHANNEL_ID = "BLEChannel";
+    private static final String CHANNEL_NAME = "BLE Service";
 
     // 服务器实例
-    private BlueDirectClient wiFiDirectClient;
+    private BleClient bleClient;
     private boolean isClientRunning = false;
 
     private final IBinder binder;
 
-    private WeakReference<BlueClientActivity> ref;
+    private WeakReference<BleClientActivity> ref;
 
     // 唤醒锁
     private PowerManager.WakeLock wakeLock;
-    private WifiManager.WifiLock wifiLock;
 
-    public BlueClientService() {
+    public BleClientService() {
         binder = new SerialBinder();
     }
     public final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    public void setWeakRef(WeakReference<BlueClientActivity> actRef){
+    public void setWeakRef(WeakReference<BleClientActivity> actRef){
         this.ref = actRef;
     }
     
@@ -112,8 +106,8 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
         return START_STICKY;
     }
 
-    public @Nullable BlueDirectClient getClient(){
-        return wiFiDirectClient;
+    public @Nullable BleClient getClient(){
+        return bleClient;
     }
     
     /**
@@ -141,7 +135,7 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
      * 创建前台服务通知
      */
     private Notification createNotification() {
-        Intent notificationIntent = new Intent(this, BlueClientActivity.class);
+        Intent notificationIntent = new Intent(this, BleClientActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(
             this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE
         );
@@ -238,10 +232,10 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
     /**
      * 启动WiFi Direct服务器
      */
-    public void connectToServer(Context context, BluetoothDevice device,
+    public void connectToServer(Context context, BleDevice device,
                                  WeakReference<ClientCallback> callback, WeakReference<FileReceiveCallback> fileCallback) {
         if (isClientRunning) {
-            stopWiFiDirectClient();
+            stopBleClient();
         }
         File parent = context.getExternalFilesDir("temp");
         if(parent == null || !parent.exists()){
@@ -252,26 +246,13 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
             @Override
             public void run() {
                 super.run();
-                if(wiFiDirectClient != null) {
-                    wiFiDirectClient.disconnect();
+                if(bleClient != null) {
+                    bleClient.disconnect();
                 }
-                wiFiDirectClient = null;
-                wiFiDirectClient = new BlueDirectClient(cacheDir, callback, fileCallback);
-                String clientId = wiFiDirectClient.getClientId();
-                try {
-                    wiFiDirectClient.connect(device);
-                } catch (IOException e) {
-//                    throw new RuntimeException(e);
-                    final String error = e.getLocalizedMessage();
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            onDisconnected(clientId,error);
-                            updateNotification("客户端启动失败");
-                        }
-                    });
-
-                }
+                bleClient = null;
+                bleClient = new BleClient(cacheDir, callback, fileCallback);
+//                String clientId = bleClient.getClientId();
+                bleClient.connectDevice(device);
             }
         }.start();
     }
@@ -281,9 +262,9 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
      */
     private void updateNotification(String contentText) {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("WiFi Direct 服务运行中")
+            .setContentTitle("蓝牙服务运行中")
             .setContentText(contentText)
-            .setSmallIcon(R.drawable.wifi_notify_small)
+            .setSmallIcon(R.drawable.ic_blue_notify)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
@@ -315,22 +296,6 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
                 Log.d(TAG, "WakeLock acquired");
             }
         }
-        
-        // 获取WiFi锁（保持WiFi连接）
-        WifiManager wifiManager = (WifiManager) getApplicationContext()
-            .getSystemService(Context.WIFI_SERVICE);
-        if (wifiManager != null) {
-            wifiLock = wifiManager.createWifiLock(
-                WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-                "WiFiDirect:WifiLock"
-            );
-            wifiLock.setReferenceCounted(false);
-            
-            if (!wifiLock.isHeld()) {
-                wifiLock.acquire();
-                Log.d(TAG, "WifiLock acquired");
-            }
-        }
     }
     
     /**
@@ -341,12 +306,6 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
             wakeLock.release();
             wakeLock = null;
             Log.d(TAG, "WakeLock released");
-        }
-        
-        if (wifiLock != null && wifiLock.isHeld()) {
-            wifiLock.release();
-            wifiLock = null;
-            Log.d(TAG, "WifiLock released");
         }
     }
     
@@ -383,11 +342,11 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
     /**
      * 停止WiFi Direct服务器
      */
-    private void stopWiFiDirectClient() {
-        if (wiFiDirectClient != null) {
+    private void stopBleClient() {
+        if (bleClient != null) {
             try {
-                wiFiDirectClient.disconnect();
-                wiFiDirectClient = null;
+                bleClient.disconnect();
+                bleClient = null;
                 isClientRunning = false;
                 Log.d(TAG, "WiFi Direct server stopped");
             } catch (Exception e) {
@@ -401,7 +360,7 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
         Log.d(TAG, "WiFiDirectForegroundService destroying");
         
         // 停止服务器
-        stopWiFiDirectClient();
+        stopBleClient();
         // 释放唤醒锁
         releaseLocks();
         
@@ -424,14 +383,14 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
     }
 
     public class SerialBinder extends Binder {
-        public BlueClientService getService() { return BlueClientService.this; }
+        public BleClientService getService() { return BleClientService.this; }
     }
 
     /**
      * 启动前台服务
      */
     public static void startService(Context context) {
-        Intent serviceIntent = new Intent(context, BlueClientService.class);
+        Intent serviceIntent = new Intent(context, BleClientService.class);
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(serviceIntent);
@@ -444,7 +403,7 @@ public class BlueClientService extends Service implements ClientCallback, FileRe
      * 停止前台服务
      */
     public static void stopService(Context context) {
-        Intent serviceIntent = new Intent(context, BlueClientService.class);
+        Intent serviceIntent = new Intent(context, BleClientService.class);
         context.stopService(serviceIntent);
     }
 }

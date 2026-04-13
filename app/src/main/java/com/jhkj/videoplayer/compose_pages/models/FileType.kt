@@ -2,10 +2,22 @@ package com.jhkj.videoplayer.compose_pages.models
 
 import android.content.Context
 import android.content.Intent
+import android.text.TextUtils
+import android.view.View
+import androidx.core.net.toUri
+import androidx.lifecycle.lifecycleScope
+import com.jhkj.gl_player.gsy_player.GsyPlayActivity
+import com.jhkj.gl_player.gsy_player.PlayTVActivity
+import com.jhkj.gl_player.model.WebResourceFile
 import com.jhkj.videoplayer.R
+import com.jhkj.videoplayer.components.FullScreenDialog
+import com.jhkj.videoplayer.databinding.MusicPlayerLayoutBinding
+import com.jhkj.videoplayer.player.MusicPlayerActivity
 import com.jhkj.videoplayer.player.VideoPlayerActivity
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import com.thegrizzlylabs.sardineandroid.DavResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 object FileType{
@@ -71,17 +83,54 @@ object FileType{
         }
     }
 
+
+    private fun getFileUrl(fileInfo:FileItem):String{
+        if(fileInfo.fileType == 0){
+            return fileInfo.path
+        }else{ // if(fileInfo.fileType == 1)
+            val baseURL = fileInfo.path
+            val username = fileInfo.credentialUser
+            val pass = fileInfo.credentialPass
+            if(!TextUtils.isEmpty(username)){
+                if(fileInfo.fileType == 1) {
+                    val noHttp = baseURL.split("://")
+                    return String.format("http://%s:%s@%s",
+                        username,pass,noHttp.last())
+                }else if(fileInfo.fileType == 2) {
+                    val noSmb = baseURL.split("://")
+                    return String.format("smb://%s:%s@%s",
+                        username,pass,noSmb.last())
+                }
+            }
+        }
+        return ""
+    }
+
     fun doLocalFileOpenAction(context: Context,file: FileItem){
         val name:String = file.fileName
-        val resPath = file.path
         if(isMovie(name)){
+//            val intent = Intent(context, GsyPlayActivity::class.java)
+//            val path = getFileUrl(file)
+//            intent.putExtra("file_url",path)
+//            intent.putExtra("file_name",file.fileName)
+
             val intent = Intent(context, VideoPlayerActivity::class.java)
             intent.putExtra("fileItem",file)
             context.startActivity(intent)
         }else if(isMusic(name)){
-
+            val intent = Intent(context, MusicPlayerActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            intent.putExtra("fileItem",file)
+            context.startActivity(intent)
         }else if(isPhoto(name)){
-
+            val dialog = FullScreenDialog(context)
+            if(file.fileType == 0) {
+                dialog.loadFilePath(file.path)
+            }else{
+                val url = getFileUrl(file)
+                dialog.loadUrl(url)
+            }
+            dialog.show()
         }else if(isText(name)){
 
         }else if(isBook(name)){
@@ -162,10 +211,12 @@ object FileType{
 
     fun isPhoto(name:String): Boolean{
         val lower = name.lowercase()
-        return lower.endsWith(".png") ||
-                lower.endsWith(".jpg") ||
-                lower.endsWith(".jpeg") ||
-                lower.endsWith(".webp")
+        return lower.endsWith(".png",true) ||
+                lower.endsWith(".jpg",true) ||
+                lower.endsWith(".jpeg",true) ||
+                lower.endsWith(".webp",true) ||
+                lower.endsWith(".dmg",true) ||
+                lower.endsWith(".raw",true)
     }
 
     fun isGif(name:String): Boolean{

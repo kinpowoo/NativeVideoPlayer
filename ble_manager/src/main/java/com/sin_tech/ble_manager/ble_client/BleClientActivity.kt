@@ -1,8 +1,6 @@
-package com.sin_tech.ble_manager.ble_tradition.activity
+package com.sin_tech.ble_manager.ble_client
 
 import android.Manifest
-import android.app.Activity
-import android.bluetooth.BluetoothDevice
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
@@ -29,11 +27,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.sin_tech.ble_manager.R
+import com.sin_tech.ble_manager.ble_tradition.activity.BlueDeviceListAdapter
 import com.sin_tech.ble_manager.ble_tradition.protocol.ClientCallback
 import com.sin_tech.ble_manager.ble_tradition.protocol.FileReceiveCallback
-import com.sin_tech.ble_manager.ble_tradition.service.BlueClientService
 import com.sin_tech.ble_manager.ble_tradition.service.BlueDirectDiscovery
 import com.sin_tech.ble_manager.databinding.BlueClientLayoutBinding
+import com.sin_tech.ble_manager.models.BleDevice
 import com.sin_tech.ble_manager.utils.FileCopyUtil
 import com.sin_tech.ble_manager.utils.FileUtils
 import com.sin_tech.ble_manager.utils.ImmersiveStatusBarUtils
@@ -41,13 +40,13 @@ import com.sin_tech.ble_manager.utils.UriToPathUtil
 import java.io.File
 import java.lang.ref.WeakReference
 
-class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallback,
+class BleClientActivity : AppCompatActivity(), ServiceConnection, ClientCallback,
     FileReceiveCallback {
     private val STORAGE_PERMISSION_REQUEST_CODE: Int = 102
 
     private var binding: BlueClientLayoutBinding? = null
     private val sb = StringBuilder()
-    private var service: BlueClientService? = null
+    private var service: BleClientService? = null
     private var isClientRunning = false
     private var discover: BlueDirectDiscovery? = null
     private var deviceAdapter: BlueDeviceListAdapter? = null
@@ -66,7 +65,7 @@ class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
 
         //绑定服务
         bindService(
-            Intent(this, BlueClientService::class.java),
+            Intent(this, BleClientService::class.java),
             this,
             BIND_AUTO_CREATE
         )
@@ -130,8 +129,8 @@ class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
             discover = BlueDirectDiscovery(
                 WeakReference(this),
                 object : BlueDirectDiscovery.BlueDiscoveryCallback {
-                    override fun onDeviceFound(dev: BluetoothDevice) {
-                        deviceAdapter?.appendDevices(dev)
+                    override fun onDeviceFound(dev: BleDevice) {
+                        deviceAdapter?.appendDevice(dev)
                     }
 
                     override fun onScanEnd() {
@@ -152,7 +151,7 @@ class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
      */
     private fun startWiFiDirectService() {
         // 启动前台服务
-        BlueClientService.startService(this)
+        BleClientService.startService(this)
         // 调度Job（Android 5.0+）
 //        WiFiDirectJobService.scheduleJob(this)
         // 更新UI
@@ -217,7 +216,7 @@ class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
 
     private val photoOrVideoSelectIntent: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { it2 ->
-            if (it2.resultCode == Activity.RESULT_OK) {
+            if (it2.resultCode == RESULT_OK) {
                 val photoUri = it2.data?.data
                 photoUri?.let { uri ->
                     // 获取持久化权限
@@ -230,7 +229,7 @@ class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
                             e.printStackTrace()
                         }
                     }
-                    val filePath = UriToPathUtil.getPathFromUri(this@BlueClientActivity, uri)
+                    val filePath = UriToPathUtil.getPathFromUri(this@BleClientActivity, uri)
                     filePath?.let { path ->
                         val newFile = File(path)
                         if (newFile.exists()) {
@@ -245,7 +244,7 @@ class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
 
 
     //连接到服务器
-    fun connectToServer(dev: BluetoothDevice) {
+    fun connectToServer(dev: BleDevice) {
         service?.connectToServer(
             this, dev, WeakReference(this), WeakReference(this)
         )
@@ -400,7 +399,7 @@ class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
 
     fun toast(str: String) {
         runOnUiThread {
-            Toast.makeText(this@BlueClientActivity, str, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@BleClientActivity, str, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -412,8 +411,8 @@ class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
 
     // 服务回调
     override fun onServiceConnected(name: ComponentName?, binder: IBinder) {
-        service = (binder as BlueClientService.SerialBinder).service
-        service?.setWeakRef(WeakReference(this@BlueClientActivity))
+        service = (binder as BleClientService.SerialBinder).service
+        service?.setWeakRef(WeakReference(this@BleClientActivity))
     }
 
     override fun onServiceDisconnected(name: ComponentName?) {
@@ -423,7 +422,7 @@ class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         menu?.clear()
         menu?.add(0, R.id.scan_blue_btn, 0, "")
-            ?.setIcon(R.drawable.ic_brodcast)
+            ?.setIcon(R.drawable.blue_client)
             ?.setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS)
         return super.onPrepareOptionsMenu(menu)
     }
@@ -444,7 +443,7 @@ class BlueClientActivity : AppCompatActivity(), ServiceConnection, ClientCallbac
      */
     private fun stopWiFiDirectService() {
         // 停止前台服务
-        BlueClientService.stopService(this)
+        BleClientService.stopService(this)
         // 取消Job
 //        WiFiDirectJobService.cancelJob(this)
         // 更新UI

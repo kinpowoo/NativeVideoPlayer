@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import com.jhkj.gl_player.AppCore
+import com.jhkj.gl_player.GysPlayInit
 import com.jhkj.videoplayer.compose_pages.room_dto.AppDatabase
 import com.jhkj.videoplayer.third_file_framework.smb_client.BySMB
 import com.jhkj.videoplayer.utils.multi_lan.TextResManager
@@ -90,6 +91,8 @@ class MainApplication : Application() {
         instance = this
         // 提前初始化数据库（可选）
         AppDatabase.getInstance(this)
+
+        GysPlayInit.initEnv()
 
         // 高级配置（可选）
         BySMB.initProperty(

@@ -25,10 +25,10 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import com.jhkj.gl_player.PlayerFragment
 import com.jhkj.gl_player.model.WebResourceFile
+import com.jhkj.gl_player.util.ContentUriUtil
 import com.jhkj.gl_player.util.DensityUtil
 import com.jhkj.gl_player.util.ImmersiveStatusBarUtils
 import com.jhkj.videoplayer.R
-import com.jhkj.videoplayer.utils.ContentUriUtil
 import com.jhkj.videoplayer.databinding.VideoPlayerLayoutBinding
 import com.jhkj.videoplayer.utils.file_recursive.FileItem
 import kotlinx.coroutines.Dispatchers
@@ -137,7 +137,6 @@ class VideoPlayerActivity : AppCompatActivity(){
                 val fileName = File(path).name
                 playerFragment?.setFileName(fileName)
                 playerFragment?.loadUrl(path)
-                binding.pickVideo.visibility = View.GONE
             }
 
 //            Toast.makeText(this, "获得path:$path", Toast.LENGTH_SHORT).show()
@@ -161,7 +160,6 @@ class VideoPlayerActivity : AppCompatActivity(){
                         playerFragment?.loadWebResource(webResFile)
                     }
                 }
-                binding.pickVideo.visibility = View.GONE
             }
         }
     }
@@ -299,14 +297,13 @@ class VideoPlayerActivity : AppCompatActivity(){
                     it.height = ViewGroup.LayoutParams.MATCH_PARENT
                     binding.contentContainer.layoutParams = it
                 }
-//                binding.pickVideo.visibility = View.GONE
             } else {
-//                binding.pickVideo.visibility = View.VISIBLE
                 val params = binding.contentContainer.layoutParams
                 params?.let {
                     it.width = ViewGroup.LayoutParams.MATCH_PARENT
-                    val h = DensityUtil.dip2px(this@VideoPlayerActivity, 240f).toInt()
-                    it.height = h
+//                    val h = DensityUtil.dip2px(this@VideoPlayerActivity, 240f).toInt()
+//                    it.height = h
+                    it.height = ViewGroup.LayoutParams.MATCH_PARENT
                     binding.contentContainer.layoutParams = it
                 }
             }

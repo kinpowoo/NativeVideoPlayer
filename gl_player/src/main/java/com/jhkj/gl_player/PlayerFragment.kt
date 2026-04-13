@@ -97,8 +97,6 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val dp240 = DensityUtil.dip2px(requireContext(), 240f).toInt()
-        setVideoViewScale(ViewGroup.LayoutParams.MATCH_PARENT, dp240)
         MyStreamManager.getInstance(requireContext()).startServer()
 
         activity?.let {
@@ -118,7 +116,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
         sh = DensityUtil.getScreenHeight(requireContext())
 
         vw = sw
-        vh = dp240
+        vh = sh
         initView(view)
         setListener(view)
     }
@@ -283,7 +281,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
             if(isDoubleClick(it))return@setOnClickListener
             if(isFullScreen){
                 isFullScreen = false
-                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED  //切换竖屏
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT //切换竖屏
             }
             else{
                 isFullScreen = true
@@ -295,7 +293,7 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
             if(isDoubleClick(it))return@setOnClickListener
             if(isFullScreen){
                 isFullScreen = false
-                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED  //切换竖屏
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT  //切换竖屏
 
 //                StatusBarTool.exitFullScreen(requireActivity(),originStatusBarColor)
 //                adjustToolbar()
@@ -438,9 +436,13 @@ class PlayerFragment : PlayerBaseFragment(),View.OnTouchListener {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         } else {
+//            setVideoViewScale(
+//                ViewGroup.LayoutParams.MATCH_PARENT,
+//                DensityUtil.dip2px(requireContext(), 240f).toInt()
+//            )
             setVideoViewScale(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                DensityUtil.dip2px(requireContext(), 240f).toInt()
+                ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
     }

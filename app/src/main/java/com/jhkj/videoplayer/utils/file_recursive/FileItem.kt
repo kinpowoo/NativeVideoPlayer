@@ -1,7 +1,5 @@
 package com.jhkj.videoplayer.utils.file_recursive
 
-import java.io.Serializable
-
 data class FileItem(
     var isDirectory: Boolean,
     var fileName:String,
@@ -20,4 +18,4 @@ data class FileItem(
     var credentialUser:String?,
     var credentialPass:String?,
     var fileType:Int  // 0是本地文件，1是webdav文，2是smb文件
-) : Serializable
+) : java.io.Serializable

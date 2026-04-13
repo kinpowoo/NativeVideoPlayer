@@ -41,4 +41,21 @@ dependencies {
 
     implementation 'com.yanzhenjie.andserver:api:2.1.12'
     annotationProcessor 'com.yanzhenjie.andserver:processor:2.1.12'
+
+    //GSY VideoPlay，全格式支持，16kb size 支持
+    implementation 'io.github.carguo:gsyvideoplayer-java:12.1.0'
+    //Whether ExoPlayer mode is needed
+//    implementation 'io.github.carguo:gsyvideoplayer-exo2:12.1.0'
+    //Whether AliPlayer mode is needed
+//    implementation 'io.github.carguo:gsyvideoplayer-aliplay:12.1.0'
+    //More ijk encoding support
+    implementation 'io.github.carguo:gsyvideoplayer-ex_so:12.1.0'
+
+    //only support 263/264/265, etc. For mpeg encoding, there will be sound but no picture.
+    //implementation 'io.github.carguo:gsyvideoplayer-arm64:12.1.0'
+    //implementation 'io.github.carguo:gsyvideoplayer-armv7a:12.1.0'
+    //implementation 'io.github.carguo:gsyvideoplayer-armv5:12.1.0'
+    //implementation 'io.github.carguo:gsyvideoplayer-x86:12.1.0'
+    //implementation 'io.github.carguo:gsyvideoplayer-x64:12.1.0'
+
 }

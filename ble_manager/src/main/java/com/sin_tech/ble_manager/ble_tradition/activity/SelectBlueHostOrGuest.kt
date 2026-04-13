@@ -12,6 +12,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import com.sin_tech.ble_manager.ble_client.BleClientActivity
+import com.sin_tech.ble_manager.ble_server.BleServerActivity
 import com.sin_tech.ble_manager.databinding.SelectBleHostOrGuestLayoutBinding
 import com.sin_tech.ble_manager.utils.BluetoothStatusManager
 import com.sin_tech.ble_manager.utils.ImmersiveStatusBarUtils
@@ -42,7 +44,7 @@ class SelectBlueHostOrGuest : AppCompatActivity() {
                 if(!checkBlueEnabled()){
                     return@setOnClickListener
                 }
-                startActivity(Intent(this@SelectBlueHostOrGuest, BlueClientActivity::class.java))
+                startActivity(Intent(this@SelectBlueHostOrGuest, BleClientActivity::class.java))
             }else{
                 checkAndRequestPermissions()
             }
@@ -53,7 +55,7 @@ class SelectBlueHostOrGuest : AppCompatActivity() {
                 if(!checkBlueEnabled()){
                     return@setOnClickListener
                 }
-                startActivity(Intent(this@SelectBlueHostOrGuest, BlueServerActivity::class.java))
+                startActivity(Intent(this@SelectBlueHostOrGuest, BleServerActivity::class.java))
             }else{
                 checkAndRequestPermissions()
             }
@@ -88,12 +90,27 @@ class SelectBlueHostOrGuest : AppCompatActivity() {
             isPermissionGranted = false
         }
 
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val blueScanPermission = ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.BLUETOOTH_SCAN
             ) == PackageManager.PERMISSION_GRANTED
             if(!blueScanPermission){
+                isPermissionGranted = false
+            }
+            val advertiser = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_ADVERTISE
+            ) == PackageManager.PERMISSION_GRANTED
+            if(!advertiser){
+                isPermissionGranted = false
+            }
+            val connPerm = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_ADVERTISE
+            ) == PackageManager.PERMISSION_GRANTED
+            if(!connPerm){
                 isPermissionGranted = false
             }
         }
@@ -135,10 +152,24 @@ class SelectBlueHostOrGuest : AppCompatActivity() {
             }
             if (ContextCompat.checkSelfPermission(
                     this,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionsNeeded.add(Manifest.permission.BLUETOOTH_CONNECT)
+            }
+            if (ContextCompat.checkSelfPermission(
+                    this,
                     Manifest.permission.BLUETOOTH_SCAN
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 permissionsNeeded.add(Manifest.permission.BLUETOOTH_SCAN)
+            }
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.BLUETOOTH_ADVERTISE
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionsNeeded.add(Manifest.permission.BLUETOOTH_ADVERTISE)
             }
         }else{
             if (ContextCompat.checkSelfPermission(
@@ -150,15 +181,8 @@ class SelectBlueHostOrGuest : AppCompatActivity() {
                 permissionsNeeded.add(Manifest.permission.ACCESS_COARSE_LOCATION)
             }
         }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.BLUETOOTH_CONNECT
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                permissionsNeeded.add(Manifest.permission.BLUETOOTH_CONNECT)
-            }
+
             if (ContextCompat.checkSelfPermission(
                     this,
                     Manifest.permission.POST_NOTIFICATIONS
