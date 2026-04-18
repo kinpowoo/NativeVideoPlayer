@@ -8,6 +8,10 @@ import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 
+import androidx.core.content.FileProvider;
+
+import java.util.List;
+
 /**
  * Created by icm on 2018/7/16.
  */
@@ -36,7 +40,6 @@ public class ContentUriUtil {
             }
             // DownloadsProvider
             else if (isDownloadsDocument(uri)) {
-
                 final String id = DocumentsContract.getDocumentId(uri);
                 final Uri contentUri = ContentUris.withAppendedId(
                         Uri.parse("content://downloads/public_downloads"), Long.parseLong(id));
@@ -78,7 +81,9 @@ public class ContentUriUtil {
         }
         // File
         else if ("file".equalsIgnoreCase(uri.getScheme())) {
-            return uri.getPath();
+            String path = uri.getPath();
+            List<String> filePath = uri.getPathSegments();
+            return path;
         }
 
         return null;

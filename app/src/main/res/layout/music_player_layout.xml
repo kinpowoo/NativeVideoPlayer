@@ -5,13 +5,9 @@
     android:id="@+id/content_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-    <eightbitlab.com.blurview.BlurTarget
-        android:id="@+id/blur_bg"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
 
-    <eightbitlab.com.blurview.BlurView
-        android:id="@+id/blur_view"
+    <android.opengl.GLSurfaceView
+        android:id="@+id/blur_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
@@ -44,6 +40,7 @@
         android:singleLine="false"
         android:textColor="@android:color/white"
         android:textSize="14sp"
+        android:gravity="center"
         app:layout_constraintEnd_toStartOf="@+id/more_opt_btn"
         app:layout_constraintStart_toEndOf="@+id/dismiss_btn"
         app:layout_constraintTop_toTopOf="parent"

@@ -97,7 +97,11 @@ class MediaGLRenderer(ctx: Context?, listener: SurfaceTexture.OnFrameAvailableLi
         1f, 1f, 0f,
         1f, -1f, 0f
     )
-    private val mTexCoordinate = floatArrayOf(0f, 0f, 0f, 1f, 1f, 1f, 0f, 0f, 1f, 1f, 1f, 0f)
+    private val mTexCoordinate = floatArrayOf(
+        0f, 0f, 0f,
+        1f, 1f, 1f,
+        0f, 0f, 1f,
+        1f, 1f, 0f)
 
     private var mPosBuffer: FloatBuffer? = null
     private var mTexBuffer: FloatBuffer? = null
