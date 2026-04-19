@@ -30,7 +30,7 @@ class CoverBackgroundRender3 {
 
     private var currentFboWidth = 0
     private var currentFboHeight = 0
-    private var resampleSize = 0
+    private var resampleSize = 4
 
     init {
         vertexBuffer = ByteBuffer.allocateDirect(vertexData.size * 4)
@@ -94,7 +94,6 @@ class CoverBackgroundRender3 {
 
         fboId = fbos[0]
         fboTextureId = textures[0]
-        resampleSize = 6
 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fboTextureId)
         GLES20.glTexImage2D(

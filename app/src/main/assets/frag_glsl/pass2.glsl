@@ -33,8 +33,8 @@ void main() {
 
     // 性能小提示：如果 mask 为 0（完全在边缘），可以跳过循环优化性能
     if (mask > 0.0) {
-        for (float i = -2.0; i <= 10.0; i += 1.0) {
-            for (float j = -2.0; j <= 6.0; j += 1.0) {
+        for (float i = -2.0; i <= 10.0; i += 2.0) {
+            for (float j = -2.0; j <= 6.0; j += 2.0) {
                 vec2 offset = vec2(i, j) * blurRadius * uTexelOffset;
                 blurColor += texture2D(uTexture, uv + offset);
                 totalWeight += 1.0;

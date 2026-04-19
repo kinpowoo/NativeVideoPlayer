@@ -101,7 +101,8 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection, BufferingLis
         glSurfaceView?.keepScreenOn = true
         isRendererSet = true
         // 初始渲染一次
-        glSurfaceView?.requestRender()
+        updateBackground(BitmapUtils.createDefaultCover(52,52))
+//        glSurfaceView?.requestRender()
 
 
         setupDragListener()
@@ -156,7 +157,6 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection, BufferingLis
                 MotionEvent.ACTION_MOVE -> {
                     val currentY = event.y
                     val deltaY = currentY - startY
-                    binding.root.translationY = deltaY
                     // 如果向下移动超过阈值，触发下拉动作
                     if (deltaY > dragThreshold) {
                         onDragDownDetected()
@@ -189,20 +189,6 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection, BufferingLis
         }
     }
 
-    /**
-     * 设置渲染参数
-     */
-    fun setRenderParameters(
-        blurRadius: Float? = null,
-        saturation: Float? = null,
-        brightness: Float? = null
-    ) {
-//        glSurfaceView?.queueEvent {
-//            blurRadius?.let { backgroundRenderer?.setBlurRadius(it) }
-//            saturation?.let { backgroundRenderer?.setSaturation(it) }
-//            brightness?.let { backgroundRenderer?.setBrightness(it) }
-//        }
-    }
 
     fun setClickListener() {
         binding.startBtn.setOnClickListener {
@@ -344,57 +330,11 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection, BufferingLis
         }
     }
 
-    fun extractAudioMetadata(uri: MediaDataSource,fileName:String) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val retriever = MediaMetadataRetriever()
-            try {
-                retriever.setDataSource(uri)
-                val title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
-                val artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
-                val album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
-                val duration =
-                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                        ?.toLongOrNull()
-                val coverBytes = retriever.embeddedPicture
-                val cover = if(coverBytes != null){
-                    BitmapFactory.decodeByteArray(coverBytes, 0, coverBytes.size)
-                }else{
-                    BitmapUtils.createDefaultCover(512,512) // 文件中没有封面数据
-                }
-                val mimeType =
-                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE)
-                val bitrate = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)
-                    ?.toIntOrNull() ?: 0
-                val bitPerSample =
-                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITS_PER_SAMPLE)
-                        ?.toIntOrNull()
-
-
-                cover?.let { coverBitmap ->
-                    updateBackground(coverBitmap)
-                }
-                withContext(Dispatchers.Main) {
-                    binding.songName.text = fileName.substringBeforeLast(".")
-                    cover?.let { coverBitmap ->
-                        binding.cover.setImageBitmap(coverBitmap)
-                    }
-                    val info =
-                        String.format(Locale.US, "%s|%s|%.0fkbps", album, artist, bitrate / 1000f)
-                    binding.trackInfo.text = info
-                }
-            } finally {
-                uri.close()
-                retriever.release()
-            }
-        }
-    }
-
     private fun loadFileAndPlay() {
         if (fileInfo != null) {
             if (fileInfo?.fileType == 0) {
                 val fileUri = fileInfo!!.path.toUri()
                 service?.loadUri(fileUri)
-                extractAudioMetadata(this, fileInfo!!.path)
             } else {
                 val webResFile = WebResourceFile(
                     fileInfo!!.path,
@@ -402,21 +342,7 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection, BufferingLis
                 )
                 lifecycleScope.launch(Dispatchers.IO) {
                     service?.loadWebResource(webResFile)
-
-                    val fileName = fileInfo?.fileName ?: ""
-//                    val coverBitmap = BitmapUtils.createDefaultCoverMusicDark(512,512)
-                    val coverBitmap = BitmapFactory.decodeResource(resources,R.mipmap.play_empty_holder)
-                    updateBackground(coverBitmap)
-
-                    withContext(Dispatchers.Main) {
-                        binding.songName.text = fileName.substringBeforeLast(".")
-                        coverBitmap?.let {
-                            binding.cover.setImageBitmap(coverBitmap)
-                        }
-                        binding.trackInfo.text = ""
-                    }
                 }
-
 
                 if (fileInfo!!.fileType == 2) {
                     if (fileInfo!!.path.startsWith("smb")) {
@@ -442,7 +368,6 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection, BufferingLis
                                 smbRaf1, smbRaf2,
                                 smbFile.length()
                             )
-                            extractAudioMetadata(mCurrentDataSource,fileInfo?.fileName ?: "")
                         } catch (e: Exception) {
                         }
                     }
@@ -476,21 +401,37 @@ class MusicPlayerActivity : AppCompatActivity(), ServiceConnection, BufferingLis
         //从其他app跳入逻辑
         if (uri != null) {
             val path = ContentUriUtil.getPath(this, uri)
-//            playerFragment?.loadUri(uri)
             if (!TextUtils.isEmpty(path)) {
-                val fileName = File(path).name
-                if (fileInfo != null) {
-                    binding.songName.text = fileName
+                lifecycleScope.launch(Dispatchers.IO) {
+                    extractAudioMetadata(this@MusicPlayerActivity, path)
                 }
             }
-
-//            Toast.makeText(this, "获得path:$path", Toast.LENGTH_SHORT).show()
         } else {
-//            Toast.makeText(this, "外部传入的uri为null", Toast.LENGTH_SHORT).show()
             fileInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getSerializableExtra("fileItem", FileItem::class.java)
             } else {
                 intent.getSerializableExtra("fileItem") as? FileItem
+            }
+            if(fileInfo != null){
+                if((fileInfo?.fileType ?: 0) == 0){
+                    val path = fileInfo!!.path
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        extractAudioMetadata(this@MusicPlayerActivity, path)
+                    }
+                }else{
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val fileName = fileInfo?.fileName ?: ""
+                        val coverBitmap = BitmapFactory.decodeResource(resources,R.mipmap.play_empty_holder)
+                        updateBackground(coverBitmap)
+                        withContext(Dispatchers.Main) {
+                            binding.songName.text = fileName.substringBeforeLast(".")
+                            coverBitmap?.let {
+                                binding.cover.setImageBitmap(coverBitmap)
+                            }
+                            binding.trackInfo.text = ""
+                        }
+                    }
+                }
             }
         }
     }
