@@ -3,6 +3,10 @@ uniform sampler2D uTexture;
 uniform vec2 uTexelOffset;
 varying vec2 varTexCoord;
 
+float getLuminance(vec3 color) {
+    return dot(color, vec3(0.2126, 0.7152, 0.0722));
+}
+
 void main() {
     // 1. 获取基础坐标和原色
     vec2 uv = varTexCoord;
@@ -47,5 +51,11 @@ void main() {
 
     // 5. 按照平滑权重进行混合
     vec4 blurredColor = mix(oriColor, blurColor, mask);
+
+    // 1. 定义你的判定阈值（数值越小，判定越严格）
+    // 2. 直接判断 R, G, B 是否都在黑色区间
+    float darkness = 1.0 - max(max(blurColor.r, blurColor.g), blurColor.b);
+    vec3 milkWhite = vec3(0.66, 0.66, 0.64);
+    blurredColor.rgb = mix(blurredColor.rgb,milkWhite,darkness*0.5);
     gl_FragColor = blurredColor;
 }
