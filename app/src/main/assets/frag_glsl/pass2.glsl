@@ -55,7 +55,7 @@ void main() {
     // 1. 定义你的判定阈值（数值越小，判定越严格）
     // 2. 直接判断 R, G, B 是否都在黑色区间
     float darkness = 1.0 - max(max(blurColor.r, blurColor.g), blurColor.b);
-    vec3 milkWhite = vec3(0.66, 0.66, 0.64);
-    blurredColor.rgb = mix(blurredColor.rgb,milkWhite,darkness*0.5);
+    vec3 milkWhite = vec3(0.96, 0.96, 0.94);
+    blurredColor.rgb = mix(blurredColor.rgb,milkWhite,darkness*0.3);
     gl_FragColor = blurredColor;
 }
