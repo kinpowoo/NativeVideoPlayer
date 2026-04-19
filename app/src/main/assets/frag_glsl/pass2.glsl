@@ -46,5 +46,6 @@ void main() {
     }
 
     // 5. 按照平滑权重进行混合
-    gl_FragColor = mix(oriColor, blurColor, mask);
+    vec4 blurredColor = mix(oriColor, blurColor, mask);
+    gl_FragColor = blurredColor;
 }
